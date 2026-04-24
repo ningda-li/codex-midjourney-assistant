@@ -1,4 +1,4 @@
-# Midjourney 常见失败模式
+﻿# Midjourney 常见失败模式
 
 ## 作用
 

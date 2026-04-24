@@ -1,4 +1,4 @@
-# Midjourney 能力地图
+﻿# Midjourney 能力地图
 
 ## 作用
 

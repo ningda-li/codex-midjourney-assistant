@@ -1,4 +1,4 @@
-# Midjourney 诊断打法
+﻿# Midjourney 诊断打法
 
 ## 作用
 

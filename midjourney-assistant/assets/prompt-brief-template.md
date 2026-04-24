@@ -1,4 +1,4 @@
-# Prompt Brief 模板
+﻿# Prompt Brief 模板
 
 - goal:
 - deliverable:

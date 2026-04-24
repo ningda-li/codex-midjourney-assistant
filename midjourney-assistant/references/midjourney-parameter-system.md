@@ -1,4 +1,4 @@
-# Midjourney 参数系统
+﻿# Midjourney 参数系统
 
 ## 作用
 

@@ -1,4 +1,4 @@
-# Run Verdict 模板
+﻿# Run Verdict 模板
 
 - run_verdict:
 - result_summary:

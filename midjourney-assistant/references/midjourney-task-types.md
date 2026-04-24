@@ -1,4 +1,4 @@
-# Midjourney 任务类型
+﻿# Midjourney 任务类型
 
 ## 作用
 

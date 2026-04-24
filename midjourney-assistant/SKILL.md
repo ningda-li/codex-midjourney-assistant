@@ -1,4 +1,4 @@
----
+﻿---
 name: midjourney-assistant
 description: 在 Codex 需要代用户操作 Midjourney 网页完成图片生成、根据创意需求自动拆解并编写 prompt、进行多轮连续生图与结果迭代、回答 Midjourney 功能与提示词问题、维护用户画像记忆，或将高频重复任务沉淀为任务模板与派生能力时使用。
 ---

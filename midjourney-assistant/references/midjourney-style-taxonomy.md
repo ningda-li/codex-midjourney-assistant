@@ -1,4 +1,4 @@
-# Midjourney 风格分类法
+﻿# Midjourney 风格分类法
 
 ## 作用
 
