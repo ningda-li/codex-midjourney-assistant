@@ -1,0 +1,480 @@
+{
+  "version": "2026-04-24",
+  "task_stages": [
+    {
+      "id": "explore",
+      "label": "exploration",
+      "goal": "find viable directions and widen variation"
+    },
+    {
+      "id": "converge",
+      "label": "convergence",
+      "goal": "keep the right direction and fix the key gaps"
+    },
+    {
+      "id": "finalize",
+      "label": "finalization",
+      "goal": "make only the last-mile delivery adjustments"
+    }
+  ],
+  "revision_modes": [
+    {
+      "id": "new_direction",
+      "label": "new direction",
+      "goal": "allow a fresh concept direction or a new subject branch",
+      "default_change_axis": "direction"
+    },
+    {
+      "id": "structure_refine",
+      "label": "structure refine",
+      "goal": "keep the validated direction and change structure, silhouette, or garment logic",
+      "default_change_axis": "structure"
+    },
+    {
+      "id": "colorway_only",
+      "label": "colorway only",
+      "goal": "change only palette assignment on the same approved design",
+      "default_change_axis": "palette"
+    },
+    {
+      "id": "finish_only",
+      "label": "finish only",
+      "goal": "change only cleanliness, polish, or delivery finish",
+      "default_change_axis": "finish"
+    },
+    {
+      "id": "local_edit",
+      "label": "local edit",
+      "goal": "modify only a bounded selected region or the existing image canvas",
+      "default_change_axis": "local"
+    }
+  ],
+  "lock_states": [
+    {
+      "id": "unlocked",
+      "goal": "the design is still open and can change direction"
+    },
+    {
+      "id": "soft_locked",
+      "goal": "major elements should stay close, but no strong base anchor is confirmed yet"
+    },
+    {
+      "id": "hard_locked",
+      "goal": "the current base design is approved enough to support strict colorway-only or finish-only changes"
+    }
+  ],
+  "deliverable_types": [
+    "selectable_grid",
+    "single_direction_frame",
+    "design_sheet",
+    "proposal_visual",
+    "final_key_visual",
+    "video_clip",
+    "style_system_asset"
+  ],
+  "task_types": [
+    {
+      "id": "character_design",
+      "aliases": [
+        "character design",
+        "character concept",
+        "hero concept"
+      ],
+      "default_deliverable": "selectable_grid",
+      "default_stage": "explore",
+      "primary_capabilities": [
+        "text_prompt",
+        "style_reference"
+      ],
+      "prompt_slots": [
+        "role_core",
+        "silhouette_pose",
+        "costume",
+        "design_language",
+        "background_control"
+      ],
+      "evaluation_focus": [
+        "subject_readability",
+        "silhouette_strength",
+        "costume_language",
+        "series_potential"
+      ],
+      "failure_modes": [
+        "subject_mismatch",
+        "style_drift",
+        "clothing_material_error"
+      ]
+    },
+    {
+      "id": "character_sheet",
+      "aliases": [
+        "character sheet",
+        "full body sheet",
+        "front-facing character sheet"
+      ],
+      "default_deliverable": "design_sheet",
+      "default_stage": "converge",
+      "primary_capabilities": [
+        "text_prompt",
+        "raw_mode"
+      ],
+      "prompt_slots": [
+        "role_core",
+        "front_view_pose",
+        "costume",
+        "material",
+        "sheet_cleanliness"
+      ],
+      "evaluation_focus": [
+        "full_body_completeness",
+        "costume_readability",
+        "background_cleanliness"
+      ],
+      "failure_modes": [
+        "composition_mismatch",
+        "clothing_material_error",
+        "commercial_finish_low"
+      ]
+    },
+    {
+      "id": "proposal_visual",
+      "aliases": [
+        "proposal visual",
+        "direction board",
+        "direction exploration"
+      ],
+      "default_deliverable": "selectable_grid",
+      "default_stage": "explore",
+      "primary_capabilities": [
+        "text_prompt"
+      ],
+      "prompt_slots": [
+        "subject",
+        "direction_axis",
+        "style_family",
+        "usage_context"
+      ],
+      "evaluation_focus": [
+        "direction_separation",
+        "brief_fit",
+        "selection_value"
+      ],
+      "failure_modes": [
+        "proposal_variation_weak",
+        "style_drift"
+      ]
+    },
+    {
+      "id": "poster",
+      "aliases": [
+        "poster",
+        "cover art",
+        "campaign poster"
+      ],
+      "default_deliverable": "proposal_visual",
+      "default_stage": "converge",
+      "primary_capabilities": [
+        "text_prompt",
+        "style_reference"
+      ],
+      "prompt_slots": [
+        "subject",
+        "hero_moment",
+        "poster_composition",
+        "negative_space",
+        "lighting"
+      ],
+      "evaluation_focus": [
+        "hero_visual_strength",
+        "layout_space",
+        "campaign_impact"
+      ],
+      "failure_modes": [
+        "composition_mismatch",
+        "style_drift",
+        "commercial_finish_low"
+      ]
+    },
+    {
+      "id": "scene_concept",
+      "aliases": [
+        "scene concept",
+        "environment concept",
+        "worldbuilding scene"
+      ],
+      "default_deliverable": "single_direction_frame",
+      "default_stage": "explore",
+      "primary_capabilities": [
+        "text_prompt",
+        "image_prompt"
+      ],
+      "prompt_slots": [
+        "scene_core",
+        "spatial_layers",
+        "mood",
+        "lighting",
+        "story_signal"
+      ],
+      "evaluation_focus": [
+        "spatial_logic",
+        "atmosphere",
+        "story_signal"
+      ],
+      "failure_modes": [
+        "composition_mismatch",
+        "style_drift"
+      ]
+    },
+    {
+      "id": "product_visual",
+      "aliases": [
+        "product visual",
+        "product ad",
+        "commercial product shot"
+      ],
+      "default_deliverable": "final_key_visual",
+      "default_stage": "converge",
+      "primary_capabilities": [
+        "text_prompt",
+        "raw_mode",
+        "omni_reference"
+      ],
+      "prompt_slots": [
+        "product_core",
+        "view_angle",
+        "material",
+        "background_control",
+        "commercial_finish"
+      ],
+      "evaluation_focus": [
+        "shape_accuracy",
+        "material_believability",
+        "commercial_finish"
+      ],
+      "failure_modes": [
+        "subject_mismatch",
+        "clothing_material_error",
+        "commercial_finish_low"
+      ]
+    },
+    {
+      "id": "fashion_material",
+      "aliases": [
+        "fashion exploration",
+        "material exploration",
+        "garment material study"
+      ],
+      "default_deliverable": "selectable_grid",
+      "default_stage": "explore",
+      "primary_capabilities": [
+        "text_prompt",
+        "style_reference"
+      ],
+      "prompt_slots": [
+        "garment_core",
+        "silhouette",
+        "fabric",
+        "construction_detail",
+        "styling_context"
+      ],
+      "evaluation_focus": [
+        "fabric_expression",
+        "construction_expression",
+        "design_language_consistency"
+      ],
+      "failure_modes": [
+        "clothing_material_error",
+        "style_drift"
+      ]
+    },
+    {
+      "id": "brand_visual_direction",
+      "aliases": [
+        "brand visual direction",
+        "brand mood direction",
+        "project style direction"
+      ],
+      "default_deliverable": "selectable_grid",
+      "default_stage": "explore",
+      "primary_capabilities": [
+        "moodboard",
+        "personalization",
+        "text_prompt"
+      ],
+      "prompt_slots": [
+        "brand_mood",
+        "subject_scope",
+        "palette",
+        "finish_level",
+        "usage_context"
+      ],
+      "evaluation_focus": [
+        "series_consistency",
+        "brand_fit",
+        "direction_clarity"
+      ],
+      "failure_modes": [
+        "style_drift",
+        "proposal_variation_weak"
+      ]
+    },
+    {
+      "id": "continuity_batch",
+      "aliases": [
+        "continue previous round",
+        "same character continuation",
+        "consistency batch"
+      ],
+      "default_deliverable": "single_direction_frame",
+      "default_stage": "converge",
+      "primary_capabilities": [
+        "omni_reference",
+        "text_prompt"
+      ],
+      "prompt_slots": [
+        "locked_subject",
+        "new_change_request",
+        "scene_update",
+        "consistency_rule"
+      ],
+      "evaluation_focus": [
+        "consistency",
+        "change_accuracy",
+        "project_continuity"
+      ],
+      "failure_modes": [
+        "consistency_weak",
+        "feedback_not_applied",
+        "reference_distortion"
+      ]
+    },
+    {
+      "id": "reference_driven",
+      "aliases": [
+        "reference driven",
+        "based on this image",
+        "follow this direction"
+      ],
+      "default_deliverable": "single_direction_frame",
+      "default_stage": "converge",
+      "primary_capabilities": [
+        "image_prompt",
+        "style_reference",
+        "omni_reference"
+      ],
+      "prompt_slots": [
+        "reference_role",
+        "subject",
+        "desired_change",
+        "retained_elements"
+      ],
+      "evaluation_focus": [
+        "reference_role_accuracy",
+        "retained_elements",
+        "changed_elements"
+      ],
+      "failure_modes": [
+        "reference_distortion",
+        "subject_mismatch",
+        "style_drift"
+      ]
+    },
+    {
+      "id": "image_edit",
+      "aliases": [
+        "image edit",
+        "local repaint",
+        "canvas expand",
+        "retexture task"
+      ],
+      "default_deliverable": "single_direction_frame",
+      "default_stage": "converge",
+      "primary_capabilities": [
+        "editor",
+        "vary_region",
+        "pan_zoom"
+      ],
+      "prompt_slots": [
+        "base_image",
+        "edit_scope",
+        "retained_elements",
+        "change_request",
+        "edit_route"
+      ],
+      "evaluation_focus": [
+        "edit_boundary_coherence",
+        "structural_retention",
+        "local_change_accuracy"
+      ],
+      "failure_modes": [
+        "edit_scope_too_small",
+        "reference_distortion",
+        "composition_mismatch"
+      ]
+    },
+    {
+      "id": "video_generation",
+      "aliases": [
+        "video generation",
+        "animate image",
+        "motion clip",
+        "loop video"
+      ],
+      "default_deliverable": "video_clip",
+      "default_stage": "converge",
+      "primary_capabilities": [
+        "video_generation",
+        "text_prompt"
+      ],
+      "prompt_slots": [
+        "starting_frame",
+        "motion_intent",
+        "ending_frame",
+        "camera_energy",
+        "video_constraints"
+      ],
+      "evaluation_focus": [
+        "motion_coherence",
+        "frame_transition",
+        "loop_quality"
+      ],
+      "failure_modes": [
+        "keyframe_unstable",
+        "motion_overreach",
+        "video_style_drift"
+      ]
+    },
+    {
+      "id": "style_system_build",
+      "aliases": [
+        "style system build",
+        "style code distill",
+        "style creator task"
+      ],
+      "default_deliverable": "style_system_asset",
+      "default_stage": "explore",
+      "primary_capabilities": [
+        "style_creator",
+        "style_explorer",
+        "draft_mode"
+      ],
+      "prompt_slots": [
+        "style_goal",
+        "exploration_seed",
+        "reusable_traits",
+        "stacking_rules",
+        "reuse_scope"
+      ],
+      "evaluation_focus": [
+        "style_reusability",
+        "style_separation",
+        "system_stability"
+      ],
+      "failure_modes": [
+        "style_direction_unclear",
+        "style_stack_pollution",
+        "proposal_variation_weak"
+      ]
+    }
+  ]
+}

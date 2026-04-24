@@ -1,0 +1,535 @@
+{
+  "version": "2026-04-24",
+  "capabilities": {
+    "text_prompt": {
+      "role": "base semantic layer for every task",
+      "use_when": [
+        "the brief is clear",
+        "direction should be explored first",
+        "no reliable reference is available"
+      ],
+      "avoid_as_only_tool": [
+        "subject consistency is required",
+        "the user already provided a strong reference"
+      ],
+      "pairs_well_with": [
+        "style_reference",
+        "omni_reference",
+        "personalization",
+        "moodboard"
+      ]
+    },
+    "image_prompt": {
+      "role": "borrow composition and image semantics",
+      "use_when": [
+        "the scene is complex",
+        "composition should be retained",
+        "the user provided a scene sample"
+      ],
+      "avoid_as_only_tool": [
+        "only style consistency is needed",
+        "only subject continuity is needed"
+      ],
+      "pairs_well_with": [
+        "style_reference",
+        "text_prompt"
+      ]
+    },
+    "style_reference": {
+      "role": "lock visual vibe and finish",
+      "use_when": [
+        "style is the main problem",
+        "a set of images must look unified",
+        "the user provided a style sample"
+      ],
+      "avoid_as_only_tool": [
+        "the face or outfit must stay the same",
+        "subject identity is the main issue"
+      ],
+      "pairs_well_with": [
+        "text_prompt",
+        "image_prompt",
+        "omni_reference"
+      ]
+    },
+    "omni_reference": {
+      "role": "lock a person or object identity",
+      "use_when": [
+        "the same character continues",
+        "the same product continues",
+        "cross-round consistency is needed"
+      ],
+      "avoid_as_only_tool": [
+        "only style should be borrowed",
+        "only composition should change"
+      ],
+      "pairs_well_with": [
+        "text_prompt",
+        "style_reference"
+      ]
+    },
+    "personalization": {
+      "role": "inject long-term user taste",
+      "use_when": [
+        "the user has stable long-term taste",
+        "the task can safely inherit personal taste"
+      ],
+      "avoid_as_only_tool": [
+        "the client brief is strict",
+        "the task must obey a narrow project style"
+      ],
+      "pairs_well_with": [
+        "text_prompt",
+        "moodboard"
+      ]
+    },
+    "moodboard": {
+      "role": "set a project-level visual range",
+      "use_when": [
+        "brand visual direction is needed",
+        "series feel matters more than one-shot precision",
+        "the user provided a board of inspirations"
+      ],
+      "avoid_as_only_tool": [
+        "only one image needs a small fix",
+        "a single style sample is already enough"
+      ],
+      "pairs_well_with": [
+        "text_prompt",
+        "personalization"
+      ]
+    },
+    "describe": {
+      "role": "extract words from an image",
+      "use_when": [
+        "the user likes an image but cannot explain why",
+        "style cues should be extracted from an image"
+      ],
+      "avoid_as_only_tool": [
+        "direct final prompt generation",
+        "replacing task understanding"
+      ],
+      "pairs_well_with": [
+        "text_prompt"
+      ]
+    },
+    "prompt_shortener": {
+      "role": "compress an overlong prompt",
+      "use_when": [
+        "the prompt is too long",
+        "style words conflict",
+        "a compressed core expression is needed"
+      ],
+      "avoid_as_only_tool": [
+        "the task is still unclear",
+        "key information is still missing"
+      ],
+      "pairs_well_with": [
+        "text_prompt"
+      ]
+    },
+    "raw_mode": {
+      "role": "reduce default model styling",
+      "use_when": [
+        "prompt obedience matters more",
+        "the result should look more like a sheet or product shot"
+      ],
+      "avoid_as_only_tool": [
+        "exploration needs more model inventiveness",
+        "the user explicitly wants stronger artistic polish"
+      ],
+      "pairs_well_with": [
+        "text_prompt",
+        "style_reference",
+        "omni_reference"
+      ]
+    },
+    "run_as_hd": {
+      "role": "finish a near-final result in higher resolution",
+      "use_when": [
+        "direction is locked",
+        "only finish and clarity are missing"
+      ],
+      "avoid_as_only_tool": [
+        "direction is not locked",
+        "subject and composition are still unstable"
+      ],
+      "pairs_well_with": [
+        "raw_mode",
+        "style_reference",
+        "omni_reference"
+      ]
+    },
+    "draft_mode": {
+      "role": "prototype directions faster at lower GPU cost",
+      "use_when": [
+        "early exploration",
+        "proposal rounds",
+        "style creator previews"
+      ],
+      "avoid_as_only_tool": [
+        "final delivery",
+        "when finish-level quality is already required"
+      ],
+      "pairs_well_with": [
+        "text_prompt",
+        "style_creator",
+        "conversational_mode"
+      ]
+    },
+    "conversational_mode": {
+      "role": "turn natural-language ideation into draft prompts",
+      "use_when": [
+        "the idea is still fuzzy",
+        "the user wants to talk through variations quickly",
+        "draft exploration is more important than final prompt stability"
+      ],
+      "avoid_as_only_tool": [
+        "prompt output must be deterministic",
+        "the task is entering automation or template distillation"
+      ],
+      "pairs_well_with": [
+        "draft_mode",
+        "text_prompt"
+      ]
+    },
+    "style_explorer": {
+      "role": "discover and shortlist reusable style codes",
+      "use_when": [
+        "style direction is known but no style code is chosen yet",
+        "the user wants to browse community-proven sref options"
+      ],
+      "avoid_as_only_tool": [
+        "subject identity is the main issue",
+        "the task already has a fixed project style code"
+      ],
+      "pairs_well_with": [
+        "style_reference",
+        "style_creator"
+      ]
+    },
+    "style_creator": {
+      "role": "distill reusable style codes for repeated future use",
+      "use_when": [
+        "the user wants a reusable style code",
+        "a long-term style system should be built"
+      ],
+      "avoid_as_only_tool": [
+        "single urgent delivery",
+        "when the style direction is still unclear"
+      ],
+      "pairs_well_with": [
+        "style_reference",
+        "draft_mode",
+        "style_explorer"
+      ]
+    },
+    "editor": {
+      "role": "modify an existing image instead of rerunning a full generation",
+      "use_when": [
+        "only part of the image should change",
+        "the canvas should be expanded",
+        "the overall direction is already correct"
+      ],
+      "avoid_as_only_tool": [
+        "the subject is fundamentally wrong",
+        "the style direction is fundamentally wrong"
+      ],
+      "pairs_well_with": [
+        "vary_region",
+        "pan_zoom",
+        "retexture",
+        "layers"
+      ]
+    },
+    "vary_region": {
+      "role": "regenerate only a selected region inside an image",
+      "use_when": [
+        "a local fix is needed",
+        "a new element should be added into one area"
+      ],
+      "avoid_as_only_tool": [
+        "global restyling",
+        "major subject replacement"
+      ],
+      "pairs_well_with": [
+        "editor",
+        "text_prompt",
+        "smart_select"
+      ]
+    },
+    "pan_zoom": {
+      "role": "expand the canvas or pull the camera back",
+      "use_when": [
+        "more space is needed around the subject",
+        "the composition is too tight"
+      ],
+      "avoid_as_only_tool": [
+        "local detail repair",
+        "style-only changes"
+      ],
+      "pairs_well_with": [
+        "editor"
+      ]
+    },
+    "smart_select": {
+      "role": "create cleaner irregular masks before erasing or replacing regions",
+      "use_when": [
+        "the edit target has complex boundaries",
+        "background removal or background replacement is needed"
+      ],
+      "avoid_as_only_tool": [
+        "a simple rectangular edit is enough",
+        "the task is a full reroll"
+      ],
+      "pairs_well_with": [
+        "editor",
+        "vary_region"
+      ]
+    },
+    "layers": {
+      "role": "place additional source images into a composition before regeneration",
+      "use_when": [
+        "the user has extra source assets to position",
+        "image compositing should happen before regeneration"
+      ],
+      "avoid_as_only_tool": [
+        "the task only needs a local repaint",
+        "the whole image should be uniformly restyled"
+      ],
+      "pairs_well_with": [
+        "editor",
+        "retexture"
+      ]
+    },
+    "retexture": {
+      "role": "restyle an existing structure while keeping its composition",
+      "use_when": [
+        "structure is right but the material or style is wrong",
+        "the whole image should be re-skinned without re-blocking it"
+      ],
+      "avoid_as_only_tool": [
+        "only one small area should change",
+        "the structural drawing is already wrong"
+      ],
+      "pairs_well_with": [
+        "editor",
+        "style_reference"
+      ]
+    },
+    "text_generation": {
+      "role": "render short quoted words inside the image",
+      "use_when": [
+        "short titles or signs are needed",
+        "the text is a visible part of the scene"
+      ],
+      "avoid_as_only_tool": [
+        "long paragraphs",
+        "serious typography layout work"
+      ],
+      "pairs_well_with": [
+        "text_prompt",
+        "raw_mode"
+      ]
+    },
+    "video_generation": {
+      "role": "animate a starting frame into a short video clip",
+      "use_when": [
+        "a still image is already approved",
+        "short motion output is required"
+      ],
+      "avoid_as_only_tool": [
+        "long-form narrative animation",
+        "when the keyframe is still unstable"
+      ],
+      "pairs_well_with": [
+        "raw_mode"
+      ]
+    },
+    "repeat_batch": {
+      "role": "run the same prompt multiple times for batch ideation",
+      "use_when": [
+        "parallel option generation is needed",
+        "the prompt is already clean and stable"
+      ],
+      "avoid_as_only_tool": [
+        "dirty prompts",
+        "high-cost finalization"
+      ],
+      "pairs_well_with": [
+        "draft_mode",
+        "text_prompt"
+      ]
+    },
+    "seed_lock": {
+      "role": "support controlled A/B tests and seed-locked reruns",
+      "use_when": [
+        "prompt experiments should be compared cleanly",
+        "a seed-locked HD rerun should stay on the same branch"
+      ],
+      "avoid_as_only_tool": [
+        "subject consistency is the real goal",
+        "turbo execution is planned"
+      ],
+      "pairs_well_with": [
+        "text_prompt"
+      ]
+    }
+  },
+  "routing_rules": [
+    {
+      "task_type": "character_design",
+      "task_stage": "explore",
+      "primary_strategy": "text_prompt",
+      "recommended_capabilities": [
+        "style_reference"
+      ],
+      "blocked_capabilities": [
+        "run_as_hd"
+      ],
+      "reference_strategy": "start with style, do not lock identity too early"
+    },
+    {
+      "task_type": "character_sheet",
+      "task_stage": "converge",
+      "primary_strategy": "raw_mode",
+      "recommended_capabilities": [
+        "text_prompt",
+        "omni_reference"
+      ],
+      "blocked_capabilities": [
+        "moodboard"
+      ],
+      "reference_strategy": "prioritize clean full-body readability"
+    },
+    {
+      "task_type": "proposal_visual",
+      "task_stage": "explore",
+      "primary_strategy": "text_prompt",
+      "recommended_capabilities": [
+        "prompt_shortener"
+      ],
+      "blocked_capabilities": [
+        "run_as_hd"
+      ],
+      "reference_strategy": "keep freedom high and avoid locking too early"
+    },
+    {
+      "task_type": "poster",
+      "task_stage": "converge",
+      "primary_strategy": "style_reference",
+      "recommended_capabilities": [
+        "text_prompt",
+        "image_prompt"
+      ],
+      "blocked_capabilities": [],
+      "reference_strategy": "style unification comes before scene semantics"
+    },
+    {
+      "task_type": "scene_concept",
+      "task_stage": "explore",
+      "primary_strategy": "image_prompt",
+      "recommended_capabilities": [
+        "text_prompt"
+      ],
+      "blocked_capabilities": [
+        "run_as_hd"
+      ],
+      "reference_strategy": "use image semantics first for complex space"
+    },
+    {
+      "task_type": "product_visual",
+      "task_stage": "converge",
+      "primary_strategy": "raw_mode",
+      "recommended_capabilities": [
+        "text_prompt",
+        "omni_reference"
+      ],
+      "blocked_capabilities": [
+        "weird_heavy"
+      ],
+      "reference_strategy": "prioritize shape accuracy and commercial finish"
+    },
+    {
+      "task_type": "brand_visual_direction",
+      "task_stage": "explore",
+      "primary_strategy": "moodboard",
+      "recommended_capabilities": [
+        "personalization",
+        "text_prompt",
+        "style_explorer"
+      ],
+      "blocked_capabilities": [
+        "style_reference_weighting"
+      ],
+      "reference_strategy": "project-level unity comes before single-image precision"
+    },
+    {
+      "task_type": "continuity_batch",
+      "task_stage": "converge",
+      "primary_strategy": "omni_reference",
+      "recommended_capabilities": [
+        "text_prompt",
+        "style_reference"
+      ],
+      "blocked_capabilities": [
+        "high_chaos"
+      ],
+      "reference_strategy": "lock the subject first, then apply only requested changes"
+    },
+    {
+      "task_type": "reference_driven",
+      "task_stage": "converge",
+      "primary_strategy": "reference_role_first",
+      "recommended_capabilities": [
+        "describe",
+        "text_prompt"
+      ],
+      "blocked_capabilities": [],
+      "reference_strategy": "determine what the reference is for before anything else"
+    },
+    {
+      "task_type": "image_edit",
+      "task_stage": "converge",
+      "primary_strategy": "editor",
+      "recommended_capabilities": [
+        "vary_region",
+        "pan_zoom"
+      ],
+      "blocked_capabilities": [
+        "run_as_hd"
+      ],
+      "reference_strategy": "keep the current structure and modify only the selected region or canvas bounds"
+    },
+    {
+      "task_type": "video_generation",
+      "task_stage": "converge",
+      "primary_strategy": "video_generation",
+      "recommended_capabilities": [
+        "text_prompt"
+      ],
+      "blocked_capabilities": [
+        "style_reference",
+        "omni_reference",
+        "image_prompt",
+        "run_as_hd"
+      ],
+      "reference_strategy": "anchor motion to a stable starting frame and avoid image-chain references"
+    },
+    {
+      "task_type": "style_system_build",
+      "task_stage": "explore",
+      "primary_strategy": "style_creator",
+      "recommended_capabilities": [
+        "style_explorer",
+        "draft_mode",
+        "style_reference"
+      ],
+      "blocked_capabilities": [
+        "run_as_hd",
+        "omni_reference"
+      ],
+      "reference_strategy": "separate style discovery from delivery prompts and distill reusable style codes"
+    }
+  ]
+}

@@ -1,0 +1,495 @@
+{
+  "version": "2026-04-24",
+  "parameter_catalog": {
+    "--ar": {
+      "category": "layout",
+      "purpose": "control aspect ratio and composition framing",
+      "default_note": "leave unset only when final delivery ratio is not decided",
+      "ranges_or_examples": [
+        "1:1",
+        "2:3",
+        "3:4",
+        "16:9"
+      ],
+      "use_when": [
+        "the target layout is known",
+        "full-body character work",
+        "poster layout matters"
+      ],
+      "avoid_when": [
+        "delivery ratio is still unclear"
+      ]
+    },
+    "--raw": {
+      "category": "style_control",
+      "purpose": "reduce default model styling",
+      "use_when": [
+        "sheet-like output",
+        "product work",
+        "prompt obedience should be higher",
+        "text rendering should be more literal"
+      ],
+      "avoid_when": [
+        "early exploration needs more invention"
+      ]
+    },
+    "--stylize": {
+      "category": "style_control",
+      "purpose": "control how much default model styling is applied",
+      "default_note": "treat it as low, medium, and high bands during planning",
+      "ranges_or_examples": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "use_when": [
+        "more artistic polish is desired",
+        "personalization should influence more"
+      ],
+      "avoid_when": [
+        "the model keeps overriding the brief"
+      ]
+    },
+    "--chaos": {
+      "category": "exploration",
+      "purpose": "increase result variation inside one run",
+      "ranges_or_examples": [
+        "0-100"
+      ],
+      "use_when": [
+        "exploration rounds",
+        "proposal boards"
+      ],
+      "avoid_when": [
+        "convergence rounds",
+        "consistency tasks"
+      ]
+    },
+    "--weird": {
+      "category": "exploration",
+      "purpose": "push results toward stranger outcomes",
+      "ranges_or_examples": [
+        "0-3000"
+      ],
+      "use_when": [
+        "unusual shapes are desired",
+        "a clear break from default taste is needed"
+      ],
+      "avoid_when": [
+        "commercial finalization",
+        "shape accuracy matters"
+      ]
+    },
+    "--draft": {
+      "category": "exploration",
+      "purpose": "test direction faster",
+      "use_when": [
+        "direction should be checked before spending more cost",
+        "style creator previews are needed"
+      ],
+      "avoid_when": [
+        "the task is already in finalization",
+        "the route is V8.1 Alpha"
+      ]
+    },
+    "--repeat": {
+      "category": "exploration",
+      "purpose": "run the same prompt multiple times for batch ideation",
+      "ranges_or_examples": [
+        "2-4 basic",
+        "2-10 standard",
+        "2-40 pro/mega"
+      ],
+      "use_when": [
+        "parallel options are needed",
+        "the prompt is already stable enough to duplicate"
+      ],
+      "avoid_when": [
+        "relax mode",
+        "dirty prompts that are not yet validated"
+      ]
+    },
+    "--exp": {
+      "category": "exploration",
+      "purpose": "increase experimental creative push in supported modern model routes",
+      "use_when": [
+        "supported V7 or V8.1 tasks need extra model invention"
+      ],
+      "avoid_when": [
+        "subject fidelity is already fragile",
+        "Omni influence is the main priority"
+      ]
+    },
+    "--no": {
+      "category": "exclusion",
+      "purpose": "exclude simple unwanted elements",
+      "use_when": [
+        "simple noun exclusions are needed",
+        "hard negative filtering is required"
+      ],
+      "avoid_when": [
+        "multi-word phrases may be split dangerously",
+        "the desired positive replacement can be written directly",
+        "the route is V8.1 Alpha"
+      ]
+    },
+    "--q": {
+      "category": "cost_quality",
+      "purpose": "control first-pass quality and GPU cost",
+      "ranges_or_examples": [
+        "1",
+        "2",
+        "4"
+      ],
+      "use_when": [
+        "direction is already stable",
+        "more first-pass detail is justified"
+      ],
+      "avoid_when": [
+        "first exploration",
+        "Omni Reference is in use",
+        "the route is V8.1 Alpha"
+      ]
+    },
+    "--seed": {
+      "category": "consistency",
+      "purpose": "support reproducible tests and comparisons",
+      "use_when": [
+        "A/B testing is needed",
+        "a prior direction should be reproduced for comparison"
+      ],
+      "avoid_when": [
+        "used as a substitute for real subject consistency",
+        "turbo execution is planned"
+      ]
+    },
+    "--iw": {
+      "category": "reference",
+      "purpose": "control Image Prompt influence",
+      "ranges_or_examples": [
+        "0-3"
+      ],
+      "use_when": [
+        "image prompt influence is too weak"
+      ],
+      "avoid_when": [
+        "text semantics are still unstable"
+      ]
+    },
+    "--sref": {
+      "category": "reference",
+      "purpose": "attach a style reference image or code",
+      "use_when": [
+        "style unification is the main goal",
+        "a style sample is explicit"
+      ],
+      "avoid_when": [
+        "subject identity is the main problem"
+      ]
+    },
+    "--sw": {
+      "category": "reference",
+      "purpose": "control style reference strength",
+      "ranges_or_examples": [
+        "0-1000"
+      ],
+      "use_when": [
+        "style reference influence is too weak"
+      ],
+      "avoid_when": [
+        "Moodboards are in use"
+      ]
+    },
+    "--sv": {
+      "category": "reference",
+      "purpose": "switch the Style Reference model version explicitly",
+      "ranges_or_examples": [
+        "V7 default --sv 6",
+        "legacy V7 --sv 4"
+      ],
+      "use_when": [
+        "style reference behavior should be pinned intentionally"
+      ],
+      "avoid_when": [
+        "Moodboards are in use",
+        "there is no reason to override the default style reference model"
+      ]
+    },
+    "--oref": {
+      "category": "reference",
+      "purpose": "attach an Omni Reference",
+      "use_when": [
+        "the same character continues",
+        "the same product continues",
+        "the same subject should persist"
+      ],
+      "avoid_when": [
+        "only style should be borrowed",
+        "the route is V8.1 Alpha"
+      ]
+    },
+    "--ow": {
+      "category": "reference",
+      "purpose": "control Omni Reference strength",
+      "ranges_or_examples": [
+        "1-1000",
+        "default 100",
+        "generally keep below 400"
+      ],
+      "use_when": [
+        "subject fidelity is too weak"
+      ],
+      "avoid_when": [
+        "subject is already stable and style is the real issue"
+      ]
+    },
+    "--p": {
+      "category": "personalization",
+      "purpose": "attach a personalization or moodboard profile",
+      "use_when": [
+        "long-term taste can be injected safely",
+        "the project allows personal style help"
+      ],
+      "avoid_when": [
+        "the project style is tightly client-bound"
+      ]
+    },
+    "--motion": {
+      "category": "video",
+      "purpose": "control how much movement the video should introduce",
+      "ranges_or_examples": [
+        "low",
+        "high"
+      ],
+      "use_when": [
+        "video generation is already selected"
+      ],
+      "avoid_when": [
+        "static image generation"
+      ]
+    },
+    "--loop": {
+      "category": "video",
+      "purpose": "reuse the starting frame as the ending frame",
+      "use_when": [
+        "a seamless loop is needed"
+      ],
+      "avoid_when": [
+        "a distinct end frame should be used"
+      ]
+    },
+    "--end": {
+      "category": "video",
+      "purpose": "set a dedicated ending frame image for video generation",
+      "use_when": [
+        "the motion should land on a different final frame"
+      ],
+      "avoid_when": [
+        "a loop is required instead"
+      ]
+    },
+    "--bs": {
+      "category": "video",
+      "purpose": "control how many video variants are generated from one prompt",
+      "ranges_or_examples": [
+        "1",
+        "2",
+        "4"
+      ],
+      "use_when": [
+        "multiple video takes are needed"
+      ],
+      "avoid_when": [
+        "the task only needs one controlled result"
+      ]
+    },
+    "--v": {
+      "category": "version",
+      "purpose": "switch the model version explicitly",
+      "use_when": [
+        "the project requires a fixed version",
+        "the live site and the default environment differ"
+      ],
+      "avoid_when": [
+        "there is no real reason to override the live environment"
+      ]
+    },
+    "--stop": {
+      "category": "legacy",
+      "purpose": "end generation early on legacy routes for a softer unfinished render",
+      "ranges_or_examples": [
+        "10-100"
+      ],
+      "use_when": [
+        "an intentional V6-or-earlier legacy workflow is requested"
+      ],
+      "avoid_when": [
+        "V7",
+        "V8.1 Alpha",
+        "Niji 7",
+        "normal current planning"
+      ]
+    }
+  },
+  "preset_bundles": {
+    "character_explore": {
+      "goal": "test character directions first",
+      "parameters": [
+        "--ar 2:3"
+      ],
+      "optional_parameters": [
+        "--draft",
+        "--chaos 20",
+        "--stylize 100"
+      ],
+      "avoid_parameters": [
+        "--q 4",
+        "early_hd_actions"
+      ]
+    },
+    "character_sheet_clean": {
+      "goal": "produce a clean full-body character sheet",
+      "parameters": [
+        "--ar 2:3",
+        "--raw"
+      ],
+      "optional_parameters": [
+        "--oref",
+        "--ow medium"
+      ],
+      "avoid_parameters": [
+        "--chaos high",
+        "--weird"
+      ]
+    },
+    "colorway_locked": {
+      "goal": "test one readable colorway on a locked base design",
+      "parameters": [
+        "--ar 2:3",
+        "--raw"
+      ],
+      "optional_parameters": [
+        "--oref",
+        "--ow 250"
+      ],
+      "avoid_parameters": [
+        "--repeat",
+        "--chaos",
+        "--weird",
+        "--draft",
+        "subject_redraw"
+      ]
+    },
+    "poster_converge": {
+      "goal": "converge toward a usable poster direction",
+      "parameters": [
+        "--ar 3:4"
+      ],
+      "optional_parameters": [
+        "--sref",
+        "--sw 100"
+      ],
+      "avoid_parameters": [
+        "--chaos high"
+      ]
+    },
+    "product_clean": {
+      "goal": "produce a cleaner commercial product visual",
+      "parameters": [
+        "--raw"
+      ],
+      "optional_parameters": [
+        "--ar 1:1",
+        "--ar 4:5",
+        "--oref"
+      ],
+      "avoid_parameters": [
+        "--weird",
+        "--chaos high"
+      ]
+    },
+    "reference_driven_scene": {
+      "goal": "use a reference image to stabilize scene semantics",
+      "parameters": [
+        "--iw 1.5"
+      ],
+      "optional_parameters": [
+        "--ar 16:9",
+        "--stylize 50"
+      ],
+      "avoid_parameters": [
+        "--iw extreme",
+        "--chaos high"
+      ]
+    },
+    "image_edit_local_fix": {
+      "goal": "keep the current image structure and change only the selected area or canvas bounds",
+      "parameters": [],
+      "optional_parameters": [],
+      "avoid_parameters": [
+        "--chaos",
+        "--weird",
+        "--repeat",
+        "global_reroll"
+      ]
+    },
+    "video_clip_loop": {
+      "goal": "turn a stable starting frame into a controlled short clip",
+      "parameters": [
+        "--motion low"
+      ],
+      "optional_parameters": [
+        "--raw",
+        "--bs 1",
+        "--loop"
+      ],
+      "avoid_parameters": [
+        "image_chain_parameters",
+        "--sref",
+        "--oref"
+      ]
+    },
+    "style_system_distill": {
+      "goal": "distill a reusable style code or shortlist style-code candidates",
+      "parameters": [
+        "--draft"
+      ],
+      "optional_parameters": [
+        "--sref random"
+      ],
+      "avoid_parameters": [
+        "--q 4",
+        "run_as_hd",
+        "subject_locking"
+      ]
+    },
+    "final_delivery": {
+      "goal": "finish when the direction is already locked",
+      "parameters": [],
+      "optional_parameters": [
+        "--q 2",
+        "run_as_hd"
+      ],
+      "avoid_parameters": [
+        "--chaos",
+        "--weird",
+        "--draft"
+      ]
+    }
+  },
+  "compatibility_warnings": [
+    "Moodboards should not be planned together with --sv or --sw",
+    "Omni Reference is not compatible with --q 4",
+    "Omni Reference is not compatible with Fast Mode, Draft Mode, or Conversational Mode",
+    "Some edit flows may require removing --oref or --ow first",
+    "Seed is not a true subject consistency tool",
+    "Seed locking is not reliable in Turbo mode",
+    "Image-only prompts are not compatible with --stylize or --weird",
+    "Video generations only accept --motion low/high, --raw, --loop, --end, and --bs",
+    "Video generation automatically drops the original image prompt parameters",
+    "V8.1 Alpha should not be planned with --q, --no, or Omni Reference",
+    "Pan, Zoom Out, Editor, and Retexture on V7/V8.1 still route through the V6.1 edit chain",
+    "--stop is legacy-only and should not be planned for V7, V8.1 Alpha, or Niji 7",
+    "Repeat is stripped from finished prompts and must be added again on reruns"
+  ]
+}

@@ -1,0 +1,522 @@
+{
+  "syntax": {
+    "python": [
+      "scripts/startup_route.py",
+      "scripts/mode_route.py",
+      "scripts/first_run_check.py",
+      "scripts/task_classify.py",
+      "scripts/solution_plan_build.py",
+      "scripts/prompt_diagnose.py",
+      "scripts/prompt_strategy_select.py",
+      "scripts/manual_mode_prepare.py",
+      "scripts/feedback_apply.py",
+      "scripts/project_context_merge.py",
+      "scripts/template_candidate_upsert.py",
+      "scripts/task_orchestrate.py",
+      "scripts/profile_signal_extract.py",
+      "scripts/profile_merge.py",
+      "scripts/experience_distill.py"
+    ],
+    "node": [
+      "scripts/midjourney_isolated_browser_once.mjs"
+    ],
+    "powershell": [
+      "scripts/browser_preflight.ps1",
+      "scripts/midjourney_isolated_browser_setup.ps1",
+      "scripts/window_state_probe.ps1",
+      "scripts/window_control_gate.ps1",
+      "scripts/midjourney_generate_once.ps1",
+      "scripts/midjourney_status_probe.ps1",
+      "scripts/midjourney_window_capture.ps1"
+    ]
+  },
+  "logic_cases": {
+    "startup": {
+      "complete_host": "www.midjourney.com",
+      "complete_browser": "Edge",
+      "complete_environment_summary": "后台模式独立浏览器登录已准备完成。"
+    },
+    "mode_routing": [
+      {
+        "message": "$midjourney-assistant 后台模式 生成一个任意角色设计",
+        "selected_mode": "automatic",
+        "selected_backend": "isolated_browser"
+      },
+      {
+        "message": "$midjourney-assistant 前台模式 生成一个任意角色设计",
+        "selected_mode": "automatic",
+        "selected_backend": "window_uia"
+      },
+      {
+        "message": "$midjourney-assistant 手动模式 生成一个任意角色设计",
+        "selected_mode": "manual",
+        "selected_backend": ""
+      },
+      {
+        "message": "$midjourney-assistant 自动模式 生成一个任意角色设计",
+        "selected_mode": "automatic",
+        "selected_backend": "isolated_browser"
+      },
+      {
+        "message": "$midjourney-assistant 生成一个任意角色设计",
+        "selected_mode": "",
+        "selected_backend": ""
+      }
+    ],
+    "english_only": {
+      "valid_task": {
+        "task_id": "regression-english-valid",
+        "project_id": "regression-english-valid",
+        "mode": "manual",
+        "round_index": 1,
+        "round_budget": 3,
+        "prompt_policy": "english_only",
+        "goal": "做一个游戏角色设计",
+        "brief": {
+          "goal": "做一个游戏角色设计",
+          "must_have": [
+            "全身角色展示",
+            "单人角色"
+          ],
+          "style_bias": [
+            "游戏设计风格"
+          ],
+          "must_not_have": [
+            "多人角色"
+          ],
+          "deliverable": "角色设计立绘"
+        },
+        "memory_consumption_snapshot": {
+          "profile_style_preferences": [
+            "电影感"
+          ],
+          "profile_work_types": [
+            "角色设计"
+          ],
+          "profile_content_preferences": [],
+          "profile_taboos": [],
+          "project_memory_lines": [],
+          "distilled_pattern_lines": [],
+          "site_change_lines": [],
+          "sources_applied": [
+            "user_profile"
+          ]
+        }
+      },
+      "invalid_task": {
+        "task_id": "regression-english-invalid",
+        "project_id": "regression-english-invalid",
+        "mode": "manual",
+        "round_index": 1,
+        "round_budget": 2,
+        "prompt_policy": "english_only",
+        "goal": "做一个龙甲角色设计",
+        "brief": {
+          "goal": "做一个龙甲角色设计",
+          "must_have": [
+            "烛龙纹样肩甲"
+          ],
+          "style_bias": [
+            "游戏设计风格"
+          ],
+          "must_not_have": []
+        }
+      },
+      "valorant_style_task": {
+        "task_id": "regression-english-valorant-style",
+        "project_id": "regression-english-valorant-style",
+        "mode": "manual",
+        "round_index": 1,
+        "round_budget": 2,
+        "prompt_policy": "english_only",
+        "prompt_language": "en",
+        "goal": "生成一个男性游戏角色形象，正面全身站立，需要现代时尚风格的服装，无畏契约的设计风格",
+        "brief": {
+          "goal": "生成一个男性游戏角色形象",
+          "must_have": [
+            "正面全身站立",
+            "现代时尚风格的服装"
+          ],
+          "style_bias": [
+            "无畏契约的设计风格"
+          ],
+          "must_not_have": []
+        }
+      }
+    },
+    "feedback": {
+      "message": "这个项目后面都保持游戏设计风格，全身，且只允许英文 prompt"
+    },
+    "manual_diagnosis": {
+      "base_task": {
+        "task_id": "regression-manual-diagnosis-task",
+        "project_id": "regression-manual-diagnosis-project",
+        "mode": "manual",
+        "prompt_policy": "english_only",
+        "round_index": 2,
+        "round_budget": 4,
+        "prompt_version": 2,
+        "goal": "生成一个男性游戏角色形象",
+        "brief": {
+          "goal": "生成一个男性游戏角色形象",
+          "must_have": [
+            "半身构图",
+            "游戏角色设计"
+          ],
+          "style_bias": [
+            "游戏设计风格"
+          ],
+          "must_not_have": []
+        }
+      },
+      "feedback_message": "改成全身，正面站姿，保留游戏设计风格，画面更干净"
+    },
+    "mode_consistency": {
+      "base_task": {
+        "task_id": "regression-mode-consistency-task",
+        "project_id": "regression-mode-consistency-project",
+        "prompt_policy": "english_only",
+        "prompt_language": "en",
+        "round_index": 1,
+        "round_budget": 3,
+        "goal": "生成一个男性游戏角色形象，正面全身站立，需要现代时尚风格的服装，无畏契约的设计风格",
+        "brief": {
+          "goal": "生成一个男性游戏角色形象",
+          "must_have": [
+            "正面全身站立",
+            "现代时尚风格的服装"
+          ],
+          "style_bias": [
+            "无畏契约的设计风格"
+          ],
+          "must_not_have": []
+        }
+      }
+    },
+    "colorway_next_action": {
+      "payload": {
+        "round_index": 3,
+        "round_budget": 5,
+        "result_available": true,
+        "should_continue": true,
+        "result_summary": "single colorway variant is available",
+        "task_model": {
+          "revision_mode": "colorway_only"
+        }
+      }
+    },
+    "template_candidate": {
+      "threshold": 2,
+      "record": {
+        "task_id": "regression-template-task",
+        "project_id": "regression-template-project",
+        "mode": "automatic",
+        "automatic_execution_backend": "isolated_browser",
+        "prompt_policy": "english_only",
+        "run_verdict": "success",
+        "goal": "生成一个角色设计提案图",
+        "brief_summary": "目标：角色设计提案；必须包含：全身角色展示；风格倾向：游戏设计风格",
+        "current_prompt": "full body game character concept art, game design style, presentation sheet",
+        "brief": {
+          "work_types": [
+            "角色设计",
+            "提案图"
+          ],
+          "style_bias": [
+            "游戏设计风格"
+          ]
+        }
+      }
+    },
+    "project_workflow": {
+      "task": {
+        "task_id": "regression-project-task",
+        "project_id": "regression-project-workflow",
+        "goal": "做一组角色设计方案",
+        "mode": "automatic",
+        "prompt_stage": "refine",
+        "round_index": 3,
+        "prompt_version": 4,
+        "task_phase": "automatic_round_executed",
+        "next_action": "iterate_prompt",
+        "last_run_verdict": "usable_but_iterate",
+        "last_result_summary": "主体和风格已接近目标，还需要继续收敛。",
+        "current_prompt": "full body game character concept art, refined silhouette, game design style",
+        "brief": {
+          "goal": "做一组角色设计方案",
+          "must_have": [
+            "全身角色展示"
+          ],
+          "style_bias": [
+            "游戏设计风格"
+          ],
+          "must_not_have": [
+            "多人角色"
+          ]
+        },
+        "project_strategy_patch": {
+          "persistent_style_bias": [
+            "游戏设计风格"
+          ],
+          "persistent_must_have": [
+            "全身角色展示"
+          ],
+          "consistency_rules": [
+            "项目保持 游戏设计风格"
+          ]
+        },
+        "template_candidate_keys": [
+          "automatic|isolated_browser|english_only|角色设计,提案图|游戏设计风格"
+        ]
+      }
+    },
+    "profile_signal": {
+      "record": {
+        "task_id": "regression-profile-task",
+        "project_id": "regression-profile-project",
+        "mode": "automatic",
+        "automatic_execution_backend": "isolated_browser",
+        "run_verdict": "success",
+        "prompt_stage": "finalize",
+        "round_index": 3,
+        "should_continue": false,
+        "goal": "做一张游戏角色设计海报",
+        "brief_summary": "角色设计海报",
+        "current_prompt": "full body game character concept art poster, cinematic lighting",
+        "brief": {
+          "goal": "做一张游戏角色设计海报",
+          "style_bias": [
+            "游戏设计风格"
+          ],
+          "must_have": [
+            "全身角色展示"
+          ],
+          "must_not_have": []
+        }
+      }
+    },
+    "governance": {
+      "blocked_reasons": [
+        "prompt_region_not_found",
+        "prompt_region_unconfirmed"
+      ]
+    },
+    "specialized_task_routes": {
+      "image_edit": {
+        "task": {
+          "task_id": "regression-image-edit-task",
+          "project_id": "regression-image-edit-project",
+          "mode": "manual",
+          "prompt_policy": "english_only",
+          "round_index": 1,
+          "goal": "keep the original composition and change only the sword in the left hand, local edit only",
+          "brief": {
+            "goal": "keep the original composition and change only the sword in the left hand, local edit only",
+            "must_have": [
+              "change only the left-hand sword"
+            ],
+            "style_bias": [],
+            "must_not_have": [
+              "change other areas"
+            ]
+          }
+        },
+        "expected_task_type": "image_edit",
+        "expected_strategy": "editor",
+        "expected_preset": "image_edit_local_fix",
+        "required_prompt_terms": [
+          "change only the left-hand sword",
+          "local edit only",
+          "preserve the rest of the image"
+        ],
+        "forbidden_prompt_terms": [
+          "avoid change other areas",
+          "keep the original composition and change only the sword in the left hand, local edit only"
+        ]
+      },
+      "video_generation_missing_starting_frame": {
+        "task": {
+          "task_id": "regression-video-missing-starting-frame",
+          "project_id": "regression-video-project",
+          "mode": "manual",
+          "prompt_policy": "english_only",
+          "round_index": 1,
+          "goal": "make a low-motion loop video for this character concept",
+          "brief": {
+            "goal": "make a low-motion loop video for this character concept",
+            "must_have": [
+              "loop video"
+            ],
+            "style_bias": [],
+            "must_not_have": []
+          }
+        },
+        "expected_task_type": "video_generation",
+        "expected_strategy": "video_generation",
+        "expected_preset": "video_clip_loop",
+        "required_open_questions": [
+          "video_starting_frame_implicit"
+        ],
+        "required_submission_notes": [
+          "当前还缺起始帧锚点"
+        ]
+      },
+      "style_system_build": {
+        "task": {
+          "task_id": "regression-style-system-task",
+          "project_id": "regression-style-system-project",
+          "mode": "manual",
+          "prompt_policy": "english_only",
+          "round_index": 1,
+          "goal": "build a reusable editorial fashion style system, search existing style codes first, then decide whether to enter style creator",
+          "brief": {
+            "goal": "build a reusable editorial fashion style system, search existing style codes first, then decide whether to enter style creator",
+            "must_have": [
+              "reusable style code system"
+            ],
+            "style_bias": [
+              "editorial fashion"
+            ],
+            "must_not_have": []
+          }
+        },
+        "expected_task_type": "style_system_build",
+        "expected_strategy": "style_creator",
+        "expected_preset": "style_system_distill",
+        "required_prompt_terms": [
+          "editorial fashion",
+          "coherent style family",
+          "reusable style language"
+        ],
+        "forbidden_prompt_terms": [
+          "search existing style codes first",
+          "then decide whether to enter style creator"
+        ]
+      },
+      "colorway_locked": {
+        "task": {
+          "task_id": "regression-colorway-locked-task",
+          "project_id": "regression-colorway-locked-project",
+          "mode": "manual",
+          "prompt_policy": "english_only",
+          "round_index": 3,
+          "goal": "same approved full-body male playable hero sheet, try one new colorway only",
+          "brief": {
+            "goal": "same approved full-body male playable hero sheet, try one new colorway only",
+            "must_have": [
+              "正面全身站立",
+              "单人角色"
+            ],
+            "style_bias": [
+              "游戏设计风格"
+            ],
+            "must_not_have": [
+              "换人",
+              "重画版型"
+            ]
+          },
+          "palette_request": {
+            "summary": "冷白石墨配色，只改颜色",
+            "top": [
+              "冷白"
+            ],
+            "bottom": [
+              "石墨灰"
+            ],
+            "hardware": [
+              "银钢"
+            ],
+            "accent": [
+              "冰蓝"
+            ]
+          },
+          "accepted_base_reference": "locked-base.png",
+          "design_lock_state": "hard_locked",
+          "project_context_snapshot": {
+            "accepted_base_reference": "locked-base.png",
+            "design_lock_state": "hard_locked",
+            "locked_elements": [
+              "face",
+              "hair",
+              "silhouette",
+              "garment_panels",
+              "material_map"
+            ]
+          },
+          "revision_patch": {
+            "revision_mode": "colorway_only",
+            "change_axis": "palette",
+            "locked_elements": [
+              "face",
+              "hair",
+              "silhouette",
+              "garment_panels",
+              "material_map"
+            ],
+            "palette_request": {
+              "summary": "冷白石墨配色，只改颜色",
+              "top": [
+                "冷白"
+              ],
+              "bottom": [
+                "石墨灰"
+              ],
+              "hardware": [
+                "银钢"
+              ],
+              "accent": [
+                "冰蓝"
+              ]
+            }
+          }
+        },
+        "expected_task_type": "continuity_batch",
+        "expected_revision_mode": "colorway_only",
+        "expected_strategy": "omni_reference",
+        "expected_preset": "colorway_locked",
+        "required_prompt_terms": [
+          "same face and hairstyle",
+          "same silhouette and garment panel layout",
+          "top in cool white",
+          "bottom in graphite gray"
+        ],
+        "forbidden_prompt_terms": [
+          "multiple palette",
+          "change the silhouette"
+        ]
+      },
+      "colorway_without_base_lock": {
+        "task": {
+          "task_id": "regression-colorway-unlocked-task",
+          "project_id": "regression-colorway-unlocked-project",
+          "mode": "manual",
+          "prompt_policy": "english_only",
+          "round_index": 2,
+          "goal": "same male hero, try another colorway",
+          "brief": {
+            "goal": "same male hero, try another colorway",
+            "must_have": [
+              "正面全身站立"
+            ],
+            "style_bias": [
+              "游戏设计风格"
+            ],
+            "must_not_have": []
+          },
+          "palette_request": {
+            "summary": "换一个冷白石墨配色"
+          },
+          "revision_patch": {
+            "revision_mode": "colorway_only",
+            "change_axis": "palette"
+          }
+        },
+        "expected_task_type": "continuity_batch",
+        "expected_revision_mode": "colorway_only",
+        "expected_strategy": "omni_reference",
+        "expected_preset": "colorway_locked",
+        "expected_prompt_error_contains": "当前是配色任务，但还没有锁定基底图。"
+      }
+    }
+  }
+}

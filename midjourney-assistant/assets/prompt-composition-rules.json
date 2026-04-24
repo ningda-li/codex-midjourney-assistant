@@ -1,0 +1,124 @@
+{
+  "version": "2026-04-24",
+  "language_policy": {
+    "prompt_text_language": "english_only",
+    "internal_notes_language": "chinese_allowed",
+    "reject_if_contains_cjk": true,
+    "reject_if_contains_internal_process_terms": true
+  },
+  "core_order": [
+    "subject",
+    "action_or_pose",
+    "scene_or_background",
+    "style_and_medium",
+    "composition",
+    "lighting",
+    "use_case",
+    "constraints"
+  ],
+  "stage_rules": {
+    "explore": {
+      "goal": "test direction first",
+      "length_bias": "short_to_medium",
+      "must_have": ["one clear subject", "one main style family", "one test axis"],
+      "avoid": ["overlong list-like prompting", "early HD finishing", "too many hard constraints"]
+    },
+    "converge": {
+      "goal": "tighten and stabilize the key parts",
+      "length_bias": "medium",
+      "must_have": ["keep list", "change list", "clearer composition or material anchors"],
+      "avoid": ["high-randomness language", "repeated synonym style words"]
+    },
+    "finalize": {
+      "goal": "make only last-mile delivery adjustments",
+      "length_bias": "medium",
+      "must_have": ["delivery context", "finish-level cues", "clean background and lighting requirements"],
+      "avoid": ["re-opening exploration", "adding a new main style family"]
+    }
+  },
+  "task_overrides": {
+    "character_design": {
+      "required_slots": ["subject", "action_or_pose", "style_and_medium", "constraints"],
+      "preferred_phrases": ["game character concept art", "clear costume silhouette"],
+      "preferred_parameters": ["--ar 2:3"]
+    },
+    "character_sheet": {
+      "required_slots": ["subject", "action_or_pose", "style_and_medium", "composition", "constraints"],
+      "preferred_phrases": ["front-facing full-body standing pose", "clean character design sheet presentation"],
+      "preferred_parameters": ["--ar 2:3", "--raw"]
+    },
+    "poster": {
+      "required_slots": ["subject", "scene_or_background", "style_and_medium", "composition", "lighting"],
+      "preferred_phrases": ["graphic poster composition", "clean negative space"],
+      "preferred_parameters": ["--ar 3:4"]
+    },
+    "product_visual": {
+      "required_slots": ["subject", "scene_or_background", "style_and_medium", "lighting", "constraints"],
+      "preferred_phrases": ["premium product visualization", "commercial finish"],
+      "preferred_parameters": ["--raw"]
+    },
+    "reference_driven": {
+      "required_slots": ["subject", "scene_or_background", "constraints"],
+      "preferred_phrases": ["retain key identity cues", "preserve the reference-driven design language"],
+      "preferred_parameters": []
+    },
+    "image_edit": {
+      "required_slots": ["edit_scope", "change_request", "edit_route"],
+      "preferred_phrases": ["local edit only", "preserve the rest of the image"],
+      "preferred_parameters": [],
+      "segment_policy": "edit_selected_region"
+    },
+    "video_generation": {
+      "required_slots": ["starting_frame", "motion_intent", "video_constraints"],
+      "preferred_phrases": ["subtle motion continuity"],
+      "preferred_parameters": [],
+      "segment_policy": "video_motion_only"
+    },
+    "style_system_build": {
+      "required_slots": ["style_anchor", "style_family", "reuse_goal", "selection_rule"],
+      "preferred_phrases": ["coherent style family", "style-code-ready direction"],
+      "preferred_parameters": [],
+      "segment_policy": "style_system_distill"
+    }
+  },
+  "revision_mode_overrides": {
+    "new_direction": {
+      "required_slots": ["subject", "action_or_pose", "style_and_medium", "constraints"]
+    },
+    "structure_refine": {
+      "preferred_phrases": ["keep the validated identity and silhouette", "change only the requested structure"],
+      "max_negative_constraints": 3
+    },
+    "colorway_only": {
+      "required_slots": ["subject", "style_and_medium", "composition", "constraints"],
+      "preferred_phrases": [
+        "same face and hairstyle",
+        "same silhouette and garment panel layout",
+        "single readable colorway variant"
+      ],
+      "max_negative_constraints": 2,
+      "forbid_multi_palette_list": true,
+      "palette_slots": ["top", "bottom", "hardware", "accent"]
+    },
+    "finish_only": {
+      "preferred_phrases": ["keep the current design", "improve only cleanliness and premium finish"],
+      "max_negative_constraints": 2
+    },
+    "local_edit": {
+      "preferred_phrases": ["local edit only", "preserve the rest of the image"],
+      "max_negative_constraints": 2
+    }
+  },
+  "forbidden_patterns": [
+    "chinese_prompt_text",
+    "internal_process_in_prompt",
+    "parameters_in_the_middle_of_prompt",
+    "style_word_stack_overload",
+    "mixed_reference_roles_without_priority"
+  ],
+  "output_contract": {
+    "parameter_position": "end_only",
+    "must_emit": ["prompt_text", "parameter_bundle", "prompt_stage"],
+    "must_not_emit": ["script_names", "internal_checks", "chinese_prompt_text", "execution_notes_inside_prompt_text"]
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "version": "2026-04-24",
+  "issue_types": {
+    "subject_mismatch": {
+      "signals": ["wrong character category", "wrong gender or age", "wrong product shape"],
+      "likely_causes": ["subject description is buried too deep", "task type is wrong", "subject reference should be used but is missing"],
+      "priority_fixes": ["move the subject anchor earlier", "remove distracting style words", "switch to Omni Reference when needed"],
+      "prompt_delta_patterns": ["strengthen subject nouns", "add pose or view", "compress non-core decoration words"]
+    },
+    "style_drift": {
+      "signals": ["style is unstable", "each round looks like a different project", "default model taste overrides the brief"],
+      "likely_causes": ["style family is not fixed", "style words are stacked", "style reference is missing"],
+      "priority_fixes": ["lock one main style family", "add Style Reference or Moodboards", "reset stylize/raw strategy"],
+      "prompt_delta_patterns": ["reduce abstract style words", "switch to concrete medium and lighting words", "keep one main style anchor"]
+    },
+    "composition_mismatch": {
+      "signals": ["not full body", "subject is cropped", "negative space is wrong", "composition is unusable"],
+      "likely_causes": ["aspect ratio is wrong", "composition anchor is too weak", "complex scene lacks image guidance"],
+      "priority_fixes": ["fix --ar first", "move full-body and front-facing anchors earlier", "add Image Prompt when needed"],
+      "prompt_delta_patterns": ["clarify view", "clarify framing", "reduce competing background elements"]
+    },
+    "clothing_material_error": {
+      "signals": ["wrong garment type", "wrong material", "weak construction details"],
+      "likely_causes": ["garment and style are mixed together", "material words are too abstract", "too many design directions are demanded at once"],
+      "priority_fixes": ["split garment and material language", "switch to visible material phrases", "keep only the current main design language"],
+      "prompt_delta_patterns": ["add structure words", "add fabric words", "remove mutually exclusive decorations"]
+    },
+    "consistency_weak": {
+      "signals": ["the same character keeps changing", "the same product details drift"],
+      "likely_causes": ["pure text is still used", "randomness is too high", "the main reference is not locked"],
+      "priority_fixes": ["switch to Omni Reference", "remove high chaos", "keep only the validated parameter set"],
+      "prompt_delta_patterns": ["reduce scene variation", "preserve locked subject words", "change only the user-requested parts"]
+    },
+    "proposal_variation_weak": {
+      "signals": ["direction boards are too similar", "the set has weak selection value"],
+      "likely_causes": ["test axes are unclear", "exploration is too conservative", "style and composition are not separated enough"],
+      "priority_fixes": ["define one test axis per direction", "raise chaos carefully", "split the board into clearer design lanes"],
+      "prompt_delta_patterns": ["widen difference labels", "emphasize different design languages", "keep shared hard constraints"]
+    },
+    "commercial_finish_low": {
+      "signals": ["the image feels dirty", "proposal quality is weak", "the output is not yet deliverable"],
+      "likely_causes": ["exploration language is still too heavy", "noise-inducing parameters are still present", "the task has not entered finalization"],
+      "priority_fixes": ["remove exploration-heavy words", "tighten lighting and background", "use HD finishing only when justified"],
+      "prompt_delta_patterns": ["surface clean and premium cues", "reduce background noise", "reduce style noise"]
+    },
+    "reference_distortion": {
+      "signals": ["the reference is not carried over correctly", "the retained elements are lost", "style and subject roles are mixed"],
+      "likely_causes": ["reference role is misread", "reference weight is wrong", "text conflicts with the reference"],
+      "priority_fixes": ["redefine the reference role", "adjust the weight", "remove conflicting text"],
+      "prompt_delta_patterns": ["clarify retained elements", "remove conflicting style words", "keep one primary reference role"]
+    },
+    "feedback_not_applied": {
+      "signals": ["the latest user feedback is missing from the next round", "the old goal is still being executed"],
+      "likely_causes": ["task_model was not updated", "process explanation came before execution", "the iteration chain broke"],
+      "priority_fixes": ["rewrite task_model first", "confirm keep and change lists first", "regenerate the next prompt from the updated task"],
+      "prompt_delta_patterns": ["change only around the latest feedback", "keep prior valid constraints", "remove content the user has already rejected"]
+    },
+    "palette_not_readable": {
+      "signals": ["the colorway cannot be read clearly", "the palette collapses into gray-white mush", "the top and bottom do not separate"],
+      "likely_causes": ["the palette instruction is too vague", "the background and clothing values are too close", "multiple palette goals are mixed together"],
+      "priority_fixes": ["force one palette only", "name top, bottom, hardware, and accent separately", "increase readable contrast without changing the structure"],
+      "prompt_delta_patterns": ["clarify top-bottom palette split", "clarify hardware and accent colors", "remove multi-palette language"]
+    },
+    "structure_drift": {
+      "signals": ["the face changes", "the silhouette changes", "the garment panel layout changes in a colorway task"],
+      "likely_causes": ["the base design is not really locked", "the model is still rerolling the subject", "the prompt does not preserve structure strongly enough"],
+      "priority_fixes": ["switch to the accepted base as the primary anchor", "strengthen same-face and same-silhouette language", "stop and relock the base before another color round"],
+      "prompt_delta_patterns": ["preserve the same face and hairstyle", "preserve the same silhouette and garment panel layout", "change only the palette assignment"]
+    },
+    "base_lock_missing": {
+      "signals": ["the task asks for colorway-only changes but no approved base design exists"],
+      "likely_causes": ["the workflow skipped base locking", "the accepted base reference is missing from project context"],
+      "priority_fixes": ["select or confirm one base design first", "write the base reference into project context before recoloring"],
+      "prompt_delta_patterns": ["do not run a colorway prompt until the base is locked"]
+    },
+    "colorway_axis_broken": {
+      "signals": ["a colorway task keeps changing structure, subject, and palette together"],
+      "likely_causes": ["revision mode is wrong", "multiple change axes are mixed into one round"],
+      "priority_fixes": ["switch the task into colorway_only", "keep only palette changes in the next round"],
+      "prompt_delta_patterns": ["keep the approved design unchanged", "change only the color assignment"]
+    }
+  },
+  "diagnosis_order": [
+    "requirement_layer",
+    "capability_layer",
+    "reference_layer",
+    "parameter_layer",
+    "iteration_layer"
+  ],
+  "output_contract": {
+    "must_include": ["observed_issues", "likely_causes", "keep_list", "change_list", "next_round_goal", "next_round_prompt_delta"],
+    "forbid": ["internal script narration", "internal regression chatter", "full prompt rewrites without diagnosis"]
+  }
+}

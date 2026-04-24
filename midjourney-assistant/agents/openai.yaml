@@ -1,0 +1,7 @@
+interface:
+  display_name: "Midjourney 使用助手"
+  short_description: "分析需求并代你操作 Midjourney 生图与迭代"
+  default_prompt: "使用 $midjourney-assistant 分析我的需求，并在 Midjourney 中完成一轮生成与结果判断。"
+
+policy:
+  allow_implicit_invocation: true
