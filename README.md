@@ -35,16 +35,30 @@
 ## 仓库结构
 
 ```text
+docs/
+  images/              README 展示截图
 midjourney-assistant/
   SKILL.md
   agents/
   assets/
   references/
   scripts/
-  templates/
 ```
 
 仓库只包含 skill 本体，不包含任何本地记忆、运行日志、登录态或个人环境状态。
+
+## 快速安装
+
+如果目标机器已经装好了 Codex，可以直接安装：
+
+```powershell
+python "$env:USERPROFILE\.codex\skills\.system\skill-installer\scripts\install-skill-from-github.py" `
+  --repo ningda-li/codex-midjourney-assistant `
+  --path midjourney-assistant `
+  --ref main
+```
+
+安装完成后，重启 Codex。
 
 ## 运行前提
 
@@ -64,4 +78,4 @@ midjourney-assistant/
 
 ## 安装
 
-安装方法、首次启动说明和 GitHub 安装命令见 [INSTALL.md](./INSTALL.md)。
+更多安装方法、首次启动说明和发布建议见 [INSTALL.md](./INSTALL.md)。
