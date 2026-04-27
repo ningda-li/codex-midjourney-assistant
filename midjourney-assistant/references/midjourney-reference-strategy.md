@@ -1,4 +1,22 @@
-﻿# Midjourney 参考体系策略
+# Midjourney 参考体系策略
+
+## 目录
+
+- 作用
+- 先判断参考图职责
+- 六类参考策略
+  - 1. 纯文本
+  - 2. Image Prompt
+  - 3. Style Reference
+  - 4. Omni Reference
+  - 5. Moodboards / Personalization
+  - 6. Style Explorer / Style Creator
+- 混用优先级
+- Describe 的位置
+- 当前实战提醒
+- 常见错误
+- 选择模板
+
 
 ## 作用
 

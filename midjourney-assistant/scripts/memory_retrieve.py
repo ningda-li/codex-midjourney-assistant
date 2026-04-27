@@ -10,6 +10,7 @@ from common import (
     configure_stdout,
     extract_keywords,
     load_profile,
+    normalize_string_list,
     project_memory_path,
     read_json_input,
     read_text,
@@ -58,16 +59,69 @@ def load_brief(args):
     raise ValueError("无法读取 brief")
 
 
-def slice_hits(text, keywords):
-    if not text.strip():
+PROFILE_SEARCH_FIELDS = [
+    "industry",
+    "work_types",
+    "style_preferences",
+    "content_preferences",
+    "taboos",
+    "quality_tendency",
+]
+
+
+def iter_search_entries(source):
+    if isinstance(source, list):
+        for item in source:
+            if isinstance(item, dict):
+                line = str(item.get("line") or "").strip()
+                if line:
+                    yield item, line
+            else:
+                line = str(item or "").strip()
+                if line:
+                    yield {}, line
+        return
+    for line in str(source or "").splitlines():
+        normalized = line.strip()
+        if normalized:
+            yield {}, normalized
+
+
+def slice_hits(source, keywords):
+    entries = list(iter_search_entries(source))
+    if not entries:
         return []
     hits = []
-    for line in text.splitlines():
+    for metadata, line in entries:
         score = score_text(line, keywords)
         if score > 0:
-            hits.append({"line": line.strip(), "score": score})
+            hit = {"line": line.strip(), "score": score}
+            for key in ["field", "value"]:
+                if key in metadata:
+                    hit[key] = metadata[key]
+            hits.append(hit)
     hits.sort(key=lambda item: item["score"], reverse=True)
     return hits[:8]
+
+
+def build_profile_search_entries(structured_profile: dict, profile_notes: list[str]):
+    entries = []
+    if isinstance(structured_profile, dict):
+        for field in PROFILE_SEARCH_FIELDS:
+            raw_value = structured_profile.get(field)
+            values = normalize_string_list(raw_value)
+            if field in {"industry", "quality_tendency"} and not values:
+                raw_text = str(raw_value or "").strip()
+                values = [raw_text] if raw_text else []
+            for value in values:
+                entries.append({
+                    "field": field,
+                    "value": value,
+                    "line": f"{field}: {value}",
+                })
+    for note in normalize_string_list(profile_notes):
+        entries.append({"field": "notes", "value": note, "line": note})
+    return entries
 
 
 def main():
@@ -85,8 +139,7 @@ def main():
     )
 
     structured_profile, profile_notes = load_profile()
-    profile_blob = json.dumps(structured_profile, ensure_ascii=False)
-    profile_hits = slice_hits(profile_blob + "\n" + "\n".join(profile_notes), keywords)
+    profile_hits = slice_hits(build_profile_search_entries(structured_profile, profile_notes), keywords)
 
     project_id = str(brief.get("project_id") or "").strip()
     project_file = project_memory_path(project_id) if project_id else None

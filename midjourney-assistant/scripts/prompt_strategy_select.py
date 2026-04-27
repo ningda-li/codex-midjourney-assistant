@@ -7,6 +7,7 @@ from pathlib import Path
 from common import (
     ASSET_ROOT,
     PROMPT_POLICY_ENGLISH_ONLY,
+    build_subject_prompt_segments,
     configure_stdout,
     is_english_prompt_text,
     normalize_prompt_policy,
@@ -176,16 +177,27 @@ def build_diagnosis_summary(task: dict):
 
 def build_diagnosis_prompt_guidance(task: dict):
     summary = build_diagnosis_summary(task)
-    prompt_cues = translate_list(summary.get("next_round_prompt_delta"), strict=False, field_label="diagnosis_delta")
-    keep_cues = translate_list(summary.get("keep_list"), strict=False, field_label="diagnosis_keep")
-    goal_cue = translate_cn_fragment_to_en(
-        summary.get("next_round_goal"),
-        strict=False,
-        field_label="diagnosis_goal",
+    latest_feedback = task.get("latest_feedback") if isinstance(task.get("latest_feedback"), dict) else {}
+    has_feedback = bool(normalize_string_list(latest_feedback.get("points"))) or bool(
+        str(latest_feedback.get("raw_text") or "").strip()
     )
-    if has_letters(goal_cue):
-        prompt_cues.append(goal_cue)
-    prompt_cues.extend(keep_cues[:2])
+    has_previous_result = bool(
+        str(task.get("last_run_verdict") or "").strip()
+        or str(task.get("last_result_summary") or "").strip()
+        or max(1, int(task.get("round_index") or 1)) > 1
+    )
+    prompt_cues = []
+    if has_feedback or has_previous_result:
+        prompt_cues = translate_list(summary.get("next_round_prompt_delta"), strict=False, field_label="diagnosis_delta")
+        keep_cues = translate_list(summary.get("keep_list"), strict=False, field_label="diagnosis_keep")
+        goal_cue = translate_cn_fragment_to_en(
+            summary.get("next_round_goal"),
+            strict=False,
+            field_label="diagnosis_goal",
+        )
+        if has_letters(goal_cue):
+            prompt_cues.append(goal_cue)
+        prompt_cues.extend(keep_cues[:2])
     review_focus = normalize_string_list(summary.get("change_list")) or normalize_string_list(summary.get("observed_issues"))
     return {
         "summary": summary,
@@ -194,7 +206,61 @@ def build_diagnosis_prompt_guidance(task: dict):
     }
 
 
+def merge_guidance_field(target: dict, field: str, values):
+    target[field] = dedupe_preserve_order(
+        normalize_string_list(target.get(field)) + normalize_string_list(values)
+    )
+
+
+def build_knowledge_guidance(task: dict, solution_plan: dict):
+    guidance = {
+        "prompt_cues": [],
+        "prompt_negative_cues": [],
+        "avoid_prompt_cues": [],
+        "submission_notes": [],
+        "parameter_preferences": [],
+        "optional_parameters": [],
+        "avoid_parameters": [],
+        "applied_rule_ids": [],
+        "source_documents": [],
+    }
+    structured = (
+        solution_plan.get("structured_knowledge")
+        if isinstance(solution_plan.get("structured_knowledge"), dict)
+        else {}
+    )
+    reference_snapshot = (
+        task.get("reference_knowledge_snapshot")
+        if isinstance(task.get("reference_knowledge_snapshot"), dict)
+        else {}
+    )
+    reference_guidance = (
+        reference_snapshot.get("guidance")
+        if isinstance(reference_snapshot.get("guidance"), dict)
+        else {}
+    )
+    for field in [
+        "prompt_cues",
+        "prompt_negative_cues",
+        "avoid_prompt_cues",
+        "submission_notes",
+        "parameter_preferences",
+        "optional_parameters",
+        "avoid_parameters",
+        "applied_rule_ids",
+    ]:
+        merge_guidance_field(guidance, field, structured.get(field))
+        merge_guidance_field(guidance, field, reference_guidance.get(field))
+    documents = []
+    for document in reference_snapshot.get("documents") or []:
+        if isinstance(document, dict):
+            documents.append(str(document.get("path") or "").strip())
+    guidance["source_documents"] = dedupe_preserve_order([item for item in documents if item])
+    return guidance
+
+
 def build_generic_segments(
+    subject_segments,
     goal,
     must_have,
     composition_goal,
@@ -206,10 +272,12 @@ def build_generic_segments(
     consistency_goal,
     feedback_points,
     diagnosis_guidance,
+    knowledge_cues,
     quality_cues,
     avoid_terms,
 ):
-    segments = [goal]
+    segments = list(subject_segments or [])
+    segments.append(goal)
     segments.extend(must_have[:4])
     segments.extend(composition_goal[:3])
     segments.extend(style_goal[:3])
@@ -220,6 +288,7 @@ def build_generic_segments(
     segments.extend(consistency_goal[:2])
     segments.extend(feedback_points[:3])
     segments.extend(diagnosis_guidance.get("prompt_cues", [])[:3])
+    segments.extend(knowledge_cues[:3])
     segments.extend(quality_cues)
     if avoid_terms:
         segments.append("avoid " + ", ".join(avoid_terms))
@@ -285,6 +354,7 @@ def translate_palette_text(text: str) -> str:
 def build_colorway_segments(task: dict, solution_plan: dict, prompt_rules: dict):
     brief = task.get("brief") if isinstance(task.get("brief"), dict) else {}
     strict_english = normalize_prompt_policy(task.get("prompt_policy")) == PROMPT_POLICY_ENGLISH_ONLY
+    subject_segments = build_subject_prompt_segments(task.get("subject_contract"))
     goal = translate_cn_fragment_to_en(
         brief.get("goal") or task.get("goal") or "",
         strict=strict_english and bool(str(brief.get("goal") or task.get("goal") or "").strip()),
@@ -304,13 +374,12 @@ def build_colorway_segments(task: dict, solution_plan: dict, prompt_rules: dict)
         raise ValueError("当前是配色任务，但还没有锁定基底图。")
 
     segments = [
+        *subject_segments,
         goal,
         "same face and hairstyle",
         "same body proportions",
         "same silhouette and garment panel layout",
         "same material map and accessory placement",
-        "front-facing full-body standing pose",
-        "single character",
         "clean character design sheet presentation",
     ]
 
@@ -354,6 +423,7 @@ def build_image_edit_segments(
     style_bias,
     preferred_phrases,
     diagnosis_guidance,
+    knowledge_cues,
     quality_cues,
     recommended_capabilities,
 ):
@@ -367,6 +437,7 @@ def build_image_edit_segments(
         segments.extend(style_bias[:2])
     segments.extend(preferred_phrases[:2])
     segments.extend(diagnosis_guidance.get("prompt_cues", [])[:2])
+    segments.extend(knowledge_cues[:2])
     if len(quality_cues) > 1:
         segments.extend(quality_cues[1:2])
     else:
@@ -374,7 +445,7 @@ def build_image_edit_segments(
     return segments
 
 
-def build_video_generation_segments(goal, must_have, preferred_phrases, diagnosis_guidance, quality_cues):
+def build_video_generation_segments(goal, must_have, preferred_phrases, diagnosis_guidance, knowledge_cues, quality_cues):
     segments = []
     segments.extend(must_have[:2])
     cleaned_goal = strip_request_lead(goal)
@@ -382,17 +453,19 @@ def build_video_generation_segments(goal, must_have, preferred_phrases, diagnosi
         segments.append(cleaned_goal)
     segments.extend(preferred_phrases[:1])
     segments.extend(diagnosis_guidance.get("prompt_cues", [])[:2])
+    segments.extend(knowledge_cues[:2])
     segments.extend(quality_cues[:2])
     return segments
 
 
-def build_style_system_segments(goal, style_goal, style_bias, preferred_phrases, diagnosis_guidance, quality_cues):
+def build_style_system_segments(goal, style_goal, style_bias, preferred_phrases, diagnosis_guidance, knowledge_cues, quality_cues):
     style_segments = dedupe_preserve_order(style_bias[:3] + style_goal[:3])
     segments = style_segments[:]
     if not segments and has_letters(goal):
         segments.append(goal)
     segments.extend(preferred_phrases[:2])
     segments.extend(diagnosis_guidance.get("prompt_cues", [])[:2])
+    segments.extend(knowledge_cues[:2])
     segments.extend(quality_cues[:2])
     return segments
 
@@ -409,6 +482,11 @@ def build_text_segments(task: dict, solution_plan: dict, prompt_rules: dict):
         segments = build_colorway_segments(task, solution_plan, prompt_rules)
         memory_guidance = build_memory_guidance(task)
         diagnosis_guidance = build_diagnosis_prompt_guidance(task)
+        knowledge_guidance = build_knowledge_guidance(task, solution_plan)
+        segments.extend(normalize_string_list(knowledge_guidance.get("prompt_cues"))[:2])
+        avoid_cues = normalize_string_list(knowledge_guidance.get("prompt_negative_cues"))[:3]
+        if avoid_cues:
+            segments.append("avoid " + ", ".join(avoid_cues))
         return segments, memory_guidance, diagnosis_guidance
 
     brief = task.get("brief") if isinstance(task.get("brief"), dict) else {}
@@ -416,6 +494,8 @@ def build_text_segments(task: dict, solution_plan: dict, prompt_rules: dict):
     strict_english = normalize_prompt_policy(task.get("prompt_policy")) == PROMPT_POLICY_ENGLISH_ONLY
     memory_guidance = build_memory_guidance(task)
     diagnosis_guidance = build_diagnosis_prompt_guidance(task)
+    knowledge_guidance = build_knowledge_guidance(task, solution_plan)
+    subject_segments = build_subject_prompt_segments(task.get("subject_contract"))
 
     goal = translate_cn_fragment_to_en(
         brief.get("goal") or task.get("goal") or "",
@@ -437,14 +517,20 @@ def build_text_segments(task: dict, solution_plan: dict, prompt_rules: dict):
     task_override = overrides.get(current_task_type(task)) if isinstance(overrides.get(current_task_type(task)), dict) else {}
     preferred_phrases = normalize_string_list(task_override.get("preferred_phrases"))
     segment_policy = str(task_override.get("segment_policy") or "").strip()
+    if segment_policy == "edit_selected_region" and current_revision_mode(task) != "local_edit":
+        segment_policy = ""
+        preferred_phrases = []
     quality_target = str(solution_plan.get("quality_target") or "").strip()
     quality_cues = QUALITY_CUES.get(quality_target, [])
     reference_role = str(task_model.get("reference_role") or "").strip()
     reference_cues = REFERENCE_ROLE_CUES.get(reference_role, [])
 
     avoid_terms = dedupe_preserve_order(
-        must_not_have + list(memory_guidance.get("taboo_terms") or [])
+        must_not_have
+        + list(memory_guidance.get("taboo_terms") or [])
+        + normalize_string_list(knowledge_guidance.get("prompt_negative_cues"))
     )
+    knowledge_cues = normalize_string_list(knowledge_guidance.get("prompt_cues"))
     recommended_capabilities = normalize_string_list(solution_plan.get("recommended_capabilities"))
     if segment_policy == "edit_selected_region":
         segments = build_image_edit_segments(
@@ -454,6 +540,7 @@ def build_text_segments(task: dict, solution_plan: dict, prompt_rules: dict):
             style_bias,
             preferred_phrases,
             diagnosis_guidance,
+            knowledge_cues,
             quality_cues,
             recommended_capabilities,
         )
@@ -463,6 +550,7 @@ def build_text_segments(task: dict, solution_plan: dict, prompt_rules: dict):
             must_have,
             preferred_phrases,
             diagnosis_guidance,
+            knowledge_cues,
             quality_cues,
         )
     elif segment_policy == "style_system_distill":
@@ -472,10 +560,12 @@ def build_text_segments(task: dict, solution_plan: dict, prompt_rules: dict):
             style_bias,
             preferred_phrases,
             diagnosis_guidance,
+            knowledge_cues,
             quality_cues,
         )
     else:
         segments = build_generic_segments(
+            subject_segments,
             goal,
             must_have,
             composition_goal,
@@ -487,9 +577,13 @@ def build_text_segments(task: dict, solution_plan: dict, prompt_rules: dict):
             consistency_goal,
             feedback_points,
             diagnosis_guidance,
+            knowledge_cues,
             quality_cues,
             avoid_terms,
         )
+
+    if subject_segments:
+        segments = list(subject_segments) + list(segments)
 
     return (
         dedupe_preserve_order([segment for segment in segments if str(segment).strip()]),
@@ -503,6 +597,7 @@ def select_parameter_strategy(task: dict, solution_plan: dict, prompt_rules: dic
     plan = solution_plan.get("parameter_strategy") if isinstance(solution_plan.get("parameter_strategy"), dict) else {}
     parameters = normalize_string_list(plan.get("parameters"))
     optional_parameters = normalize_string_list(plan.get("optional_parameters"))
+    knowledge_guidance = build_knowledge_guidance(task, solution_plan)
 
     task_override = (
         prompt_rules.get("task_overrides", {}).get(current_task_type(task), {})
@@ -517,6 +612,12 @@ def select_parameter_strategy(task: dict, solution_plan: dict, prompt_rules: dic
     for parameter in preferred_parameters:
         if parameter not in parameters:
             parameters.append(parameter)
+    for parameter in normalize_string_list(knowledge_guidance.get("parameter_preferences")):
+        if parameter not in parameters:
+            parameters.append(parameter)
+    for parameter in normalize_string_list(knowledge_guidance.get("optional_parameters")):
+        if parameter not in optional_parameters:
+            optional_parameters.append(parameter)
 
     compatibility_warnings = normalize_string_list(plan.get("compatibility_warnings"))
     compatibility_warnings.extend(normalize_string_list(parameter_payload.get("compatibility_warnings")))
@@ -524,7 +625,10 @@ def select_parameter_strategy(task: dict, solution_plan: dict, prompt_rules: dic
     return {
         "parameters": dedupe_preserve_order(parameters),
         "optional_parameters": dedupe_preserve_order(optional_parameters),
-        "avoid_parameters": normalize_string_list(plan.get("avoid_parameters")),
+        "avoid_parameters": dedupe_preserve_order(
+            normalize_string_list(plan.get("avoid_parameters"))
+            + normalize_string_list(knowledge_guidance.get("avoid_parameters"))
+        ),
         "compatibility_warnings": dedupe_preserve_order(compatibility_warnings),
     }
 
@@ -597,7 +701,7 @@ def build_capability_notes(task: dict, solution_plan: dict):
     return dedupe_preserve_order(notes)
 
 
-def build_submission_notes(task: dict, solution_plan: dict, parameter_strategy: dict, diagnosis_guidance: dict):
+def build_submission_notes(task: dict, solution_plan: dict, parameter_strategy: dict, diagnosis_guidance: dict, knowledge_guidance: dict):
     notes = [
         "先按当前 execution prompt 原样提交，不要同时新增平台侧变量。",
         "如果没有对应参考图，就先不要硬上需要图像输入的参考能力。",
@@ -637,6 +741,7 @@ def build_submission_notes(task: dict, solution_plan: dict, parameter_strategy: 
         notes.append("本轮目标：" + next_round_goal)
     if next_round_strategy:
         notes.append("本轮策略：" + next_round_strategy)
+    notes.extend(normalize_string_list(knowledge_guidance.get("submission_notes")))
     notes.extend(build_capability_notes(task, solution_plan))
     return dedupe_preserve_order(notes)
 
@@ -688,6 +793,7 @@ def build_prompt_package(task: dict, force_regenerate: bool = False):
     prompt_version = max(1, int(task.get("prompt_version") or 1))
     prompt_rules = load_asset(PROMPT_RULES_PATH)
     solution_plan = task.get("solution_plan") if isinstance(task.get("solution_plan"), dict) else {}
+    knowledge_guidance = build_knowledge_guidance(task, solution_plan)
     readiness = solution_plan.get("readiness") if isinstance(solution_plan.get("readiness"), dict) else {}
     if not readiness.get("ready", True):
         blocked_reasons = normalize_string_list(readiness.get("blocked_reasons"))
@@ -730,6 +836,7 @@ def build_prompt_package(task: dict, force_regenerate: bool = False):
         "project_id": task.get("project_id", ""),
         "prompt_stage": current_stage(task),
         "prompt_policy": normalize_prompt_policy(task.get("prompt_policy")),
+        "subject_contract": task.get("subject_contract") or {},
         "brief_summary": build_brief_summary(task),
         "feedback_summary": "、".join(extract_feedback_points(task)),
         "prompt_structure": normalize_string_list(solution_plan.get("prompt_structure")),
@@ -738,10 +845,18 @@ def build_prompt_package(task: dict, force_regenerate: bool = False):
         "parameter_options": parameter_strategy["optional_parameters"],
         "accepted_base_reference": accepted_base_reference,
         "reference_bundle": build_reference_bundle(task, solution_plan),
-        "submission_notes": build_submission_notes(task, solution_plan, parameter_strategy, diagnosis_guidance),
+        "submission_notes": build_submission_notes(
+            task,
+            solution_plan,
+            parameter_strategy,
+            diagnosis_guidance,
+            knowledge_guidance,
+        ),
         "result_readback_focus": build_result_focus(task),
         "quality_target": str(solution_plan.get("quality_target") or "").strip(),
         "memory_guidance": memory_guidance,
+        "knowledge_guidance": knowledge_guidance,
+        "knowledge_sources": normalize_string_list(knowledge_guidance.get("source_documents")),
         "diagnosis_summary": diagnosis_summary,
         "review_focus": normalize_string_list(diagnosis_guidance.get("review_focus")),
         "solution_summary": {

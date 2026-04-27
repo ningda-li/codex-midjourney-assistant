@@ -3,7 +3,16 @@ import json
 import sys
 from pathlib import Path
 
-from common import ASSET_ROOT, configure_stdout, normalize_string_list, now_iso, read_json_file, read_json_input
+from common import (
+    _text_contains_any,
+    ASSET_ROOT,
+    configure_stdout,
+    normalize_string_list,
+    normalize_subject_contract,
+    now_iso,
+    read_json_file,
+    read_json_input,
+)
 from task_classify import classify_task
 
 
@@ -66,14 +75,57 @@ def build_source_text(task: dict) -> str:
     return " ".join(part for part in parts if part).strip().lower()
 
 
+def detect_subject_contract_issues(task: dict, text: str):
+    subject_contract = normalize_subject_contract(
+        task.get("subject_contract")
+        or (task.get("task_model") or {}).get("subject_contract")
+    )
+    if not any(subject_contract.values()):
+        return []
+
+    issues = []
+    if subject_contract.get("gender") == "male" and _text_contains_any(
+        text,
+        ["女性", "女的", "女人", "woman", "female", "girl"],
+    ):
+        issues.append("subject_mismatch")
+    if subject_contract.get("gender") == "female" and _text_contains_any(
+        text,
+        ["男性", "男的", "男人", "man", "male", "boy"],
+    ):
+        issues.append("subject_mismatch")
+    if subject_contract.get("count") == "single" and _text_contains_any(
+        text,
+        ["多人", "群像", "四个", "4个", "group", "multiple characters"],
+    ):
+        issues.append("subject_mismatch")
+        issues.append("structure_drift")
+
+    latest_feedback = task.get("latest_feedback") if isinstance(task.get("latest_feedback"), dict) else {}
+    feedback_text = " ".join(
+        [
+            str(latest_feedback.get("raw_text") or ""),
+            " ".join(normalize_string_list(latest_feedback.get("points"))),
+        ]
+    ).lower()
+    if (
+        _text_contains_any(feedback_text, ["不要女性", "不要多人", "no women", "no group"])
+        and "subject_mismatch" in issues
+        and "feedback_not_applied" not in issues
+    ):
+        issues.append("feedback_not_applied")
+    return normalize_string_list(issues)
+
+
 def select_issue_types(task: dict, text: str):
     task_model = task.get("task_model") if isinstance(task.get("task_model"), dict) else {}
     revision_mode = str(task_model.get("revision_mode") or "").strip()
     solution_plan = task.get("solution_plan") if isinstance(task.get("solution_plan"), dict) else {}
     readiness = solution_plan.get("readiness") if isinstance(solution_plan.get("readiness"), dict) else {}
+    contract_issues = detect_subject_contract_issues(task, text)
 
     if revision_mode == "colorway_only":
-        selected = []
+        selected = list(contract_issues)
         if "base_lock_missing" in normalize_string_list(readiness.get("blocked_reasons")):
             selected.append("base_lock_missing")
         if any(keyword.lower() in text for keyword in ISSUE_KEYWORDS["structure_drift"]):
@@ -83,9 +135,9 @@ def select_issue_types(task: dict, text: str):
         if any(keyword.lower() in text for keyword in ISSUE_KEYWORDS["colorway_axis_broken"]):
             selected.append("colorway_axis_broken")
         if selected:
-            return selected[:3]
+            return normalize_string_list(selected)[:3]
 
-    selected = []
+    selected = list(contract_issues)
     for issue_type, keywords in ISSUE_KEYWORDS.items():
         if issue_type in {"palette_not_readable", "structure_drift", "base_lock_missing", "colorway_axis_broken"}:
             continue
@@ -93,7 +145,7 @@ def select_issue_types(task: dict, text: str):
             selected.append(issue_type)
     if not selected and str(task.get("last_run_verdict") or "").strip() == "usable_but_iterate":
         selected = normalize_string_list(task_model.get("failure_modes"))[:2]
-    return selected[:3]
+    return normalize_string_list(selected)[:3]
 
 
 def build_keep_list(task: dict):

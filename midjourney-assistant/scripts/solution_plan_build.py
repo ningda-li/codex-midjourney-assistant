@@ -4,12 +4,13 @@ import sys
 from pathlib import Path
 
 from common import ASSET_ROOT, configure_stdout, normalize_string_list, now_iso, read_json_file, read_json_input
-from task_classify import classify_task, keyword_in_text
+from task_classify import classify_task, has_explicit_image_edit_signal, keyword_in_text
 
 
 CAPABILITY_ROUTING_PATH = ASSET_ROOT / "capability-routing.json"
 PARAMETER_PRESETS_PATH = ASSET_ROOT / "parameter-presets.json"
 PROMPT_RULES_PATH = ASSET_ROOT / "prompt-composition-rules.json"
+KNOWLEDGE_RULES_PATH = ASSET_ROOT / "knowledge-rules.json"
 
 
 def parse_args():
@@ -73,7 +74,7 @@ def select_parameter_preset(task_model: dict):
         return "product_clean"
     if task_type == "reference_driven":
         return "reference_driven_scene"
-    if task_type == "image_edit":
+    if task_type == "image_edit" and revision_mode == "local_edit":
         return "image_edit_local_fix"
     if task_type == "video_generation":
         return "video_clip_loop"
@@ -90,9 +91,11 @@ def build_reference_strategy(task_model: dict, routing_rule: dict):
     revision_mode = str(task_model.get("revision_mode") or "").strip()
     if revision_mode == "colorway_only":
         return "treat the locked base design as the primary anchor, preserve face, silhouette, garment panels, and material map, then change only the palette assignment"
+    if task_type == "image_edit" and revision_mode != "local_edit":
+        return "treat this round as a fresh direction update and rebuild the full prompt instead of using a local edit route"
     if task_type == "continuity_batch":
         return "use omni_reference as the primary subject anchor and keep style support secondary"
-    if task_type == "image_edit":
+    if task_type == "image_edit" and revision_mode == "local_edit":
         return "keep the current image structure, change only the edited area, and avoid reopening the whole concept"
     if task_type == "video_generation":
         return "treat the starting frame as the anchor and avoid carrying image-chain references into the video route"
@@ -132,7 +135,7 @@ def build_quality_target(task_model: dict):
         return "colorway_readability"
     if task_stage == "finalize":
         return "final_delivery"
-    if task_type == "image_edit":
+    if task_type == "image_edit" and revision_mode == "local_edit":
         return "edit_integrity"
     if task_type == "video_generation":
         return "motion_proof"
@@ -188,6 +191,104 @@ def append_unique(values, candidate: str):
         values.append(normalized)
 
 
+def append_unique_many(values, candidates):
+    for candidate in normalize_string_list(candidates):
+        append_unique(values, candidate)
+
+
+def merge_reference_documents(target, documents):
+    seen = {
+        (
+            str(item.get("path") or "").strip(),
+            tuple(normalize_string_list(item.get("sections"))),
+        )
+        for item in target
+        if isinstance(item, dict)
+    }
+    for document in documents or []:
+        if not isinstance(document, dict):
+            continue
+        path = str(document.get("path") or "").strip()
+        sections = normalize_string_list(document.get("sections"))
+        if not path:
+            continue
+        key = (path, tuple(sections))
+        if key in seen:
+            continue
+        target.append({"path": path, "sections": sections})
+        seen.add(key)
+
+
+def merge_knowledge_rule(target: dict, rule: dict):
+    if not isinstance(rule, dict):
+        return
+    rule_id = str(rule.get("rule_id") or "").strip()
+    if rule_id:
+        append_unique(target["applied_rule_ids"], rule_id)
+    for field in [
+        "prompt_cues",
+        "prompt_negative_cues",
+        "avoid_prompt_cues",
+        "submission_notes",
+        "parameter_preferences",
+        "optional_parameters",
+        "avoid_parameters",
+        "recommended_capabilities",
+        "blocked_capabilities",
+    ]:
+        append_unique_many(target[field], rule.get(field))
+    merge_reference_documents(target["reference_documents"], rule.get("reference_documents"))
+
+
+def build_structured_knowledge(knowledge_payload: dict, task_model: dict, capabilities=None):
+    target = {
+        "source_asset": "assets/knowledge-rules.json",
+        "applied_rule_ids": [],
+        "prompt_cues": [],
+        "prompt_negative_cues": [],
+        "avoid_prompt_cues": [],
+        "submission_notes": [],
+        "parameter_preferences": [],
+        "optional_parameters": [],
+        "avoid_parameters": [],
+        "recommended_capabilities": [],
+        "blocked_capabilities": [],
+        "reference_documents": [],
+    }
+    if not isinstance(knowledge_payload, dict):
+        return target
+
+    merge_reference_documents(target["reference_documents"], knowledge_payload.get("default_documents"))
+
+    task_type = str(task_model.get("task_type") or "").strip()
+    task_stage = str(task_model.get("task_stage") or "").strip()
+    revision_mode = str(task_model.get("revision_mode") or "").strip()
+
+    stage_rules = knowledge_payload.get("stage_rules") if isinstance(knowledge_payload.get("stage_rules"), dict) else {}
+    revision_rules = (
+        knowledge_payload.get("revision_mode_rules")
+        if isinstance(knowledge_payload.get("revision_mode_rules"), dict)
+        else {}
+    )
+    task_rules = (
+        knowledge_payload.get("task_type_rules")
+        if isinstance(knowledge_payload.get("task_type_rules"), dict)
+        else {}
+    )
+    capability_rules = (
+        knowledge_payload.get("capability_rules")
+        if isinstance(knowledge_payload.get("capability_rules"), dict)
+        else {}
+    )
+
+    merge_knowledge_rule(target, task_rules.get(task_type))
+    merge_knowledge_rule(target, revision_rules.get(revision_mode))
+    merge_knowledge_rule(target, stage_rules.get(task_stage))
+    for capability in normalize_string_list(capabilities):
+        merge_knowledge_rule(target, capability_rules.get(capability))
+    return target
+
+
 def get_project_context(task: dict):
     snapshot = task.get("project_context_snapshot")
     if isinstance(snapshot, dict):
@@ -240,6 +341,8 @@ def apply_capability_hints(task: dict, recommended_capabilities, blocked_capabil
     text = build_source_text(task)
     task_model = task.get("task_model") if isinstance(task.get("task_model"), dict) else {}
     task_stage = str(task_model.get("task_stage") or "").strip()
+    revision_mode = str(task_model.get("revision_mode") or "").strip()
+    explicit_image_edit = revision_mode == "local_edit" or has_explicit_image_edit_signal(text)
 
     if any(keyword_in_text(text, token) for token in ["文字", "字样", "标题", "招牌", "标语", "text", "logo", "sign"]):
         append_unique(recommended_capabilities, "text_generation")
@@ -250,26 +353,23 @@ def apply_capability_hints(task: dict, recommended_capabilities, blocked_capabil
         append_unique(blocked_capabilities, "omni_reference")
         append_unique(blocked_capabilities, "image_prompt")
 
-    if any(
-        keyword_in_text(text, token)
-        for token in ["局部", "擦除", "重绘", "修这个区域", "vary region", "erase", "inpaint", "editor", "编辑"]
-    ):
+    if explicit_image_edit:
         append_unique(recommended_capabilities, "editor")
         append_unique(recommended_capabilities, "vary_region")
 
-    if any(keyword_in_text(text, token) for token in ["扩图", "补边", "拉远", "zoom out", "pan", "往外扩"]):
+    if explicit_image_edit and any(keyword_in_text(text, token) for token in ["扩图", "补边", "拉远", "zoom out", "pan", "往外扩"]):
         append_unique(recommended_capabilities, "editor")
         append_unique(recommended_capabilities, "pan_zoom")
 
-    if any(keyword_in_text(text, token) for token in ["retexture", "整体换风格", "整体换材质", "重贴图", "整体重做风格"]):
+    if explicit_image_edit and any(keyword_in_text(text, token) for token in ["retexture", "整体换风格", "整体换材质", "重贴图", "整体重做风格"]):
         append_unique(recommended_capabilities, "editor")
         append_unique(recommended_capabilities, "retexture")
 
-    if any(keyword_in_text(text, token) for token in ["图层", "layers", "叠图", "摆素材"]):
+    if explicit_image_edit and any(keyword_in_text(text, token) for token in ["图层", "layers", "叠图", "摆素材"]):
         append_unique(recommended_capabilities, "editor")
         append_unique(recommended_capabilities, "layers")
 
-    if any(keyword_in_text(text, token) for token in ["smart select", "智能选区", "选背景", "抠背景"]):
+    if explicit_image_edit and any(keyword_in_text(text, token) for token in ["smart select", "智能选区", "选背景", "抠背景"]):
         append_unique(recommended_capabilities, "editor")
         append_unique(recommended_capabilities, "smart_select")
 
@@ -301,14 +401,17 @@ def build_solution_plan(task: dict):
     routing_payload = load_asset(CAPABILITY_ROUTING_PATH)
     parameter_payload = load_asset(PARAMETER_PRESETS_PATH)
     prompt_rules = load_asset(PROMPT_RULES_PATH)
+    knowledge_payload = load_asset(KNOWLEDGE_RULES_PATH)
 
     task_type = str(task_model.get("task_type") or "").strip()
     task_stage = str(task_model.get("task_stage") or "").strip()
     revision_mode = str(task_model.get("revision_mode") or "").strip()
     routing_rule = find_routing_rule(routing_payload, task_type, task_stage)
     revision_readiness = build_revision_readiness(task, task_model)
+    structured_knowledge = build_structured_knowledge(knowledge_payload, task_model)
 
     recommended_capabilities = normalize_string_list(routing_rule.get("recommended_capabilities"))
+    append_unique_many(recommended_capabilities, structured_knowledge.get("recommended_capabilities"))
     primary_strategy = str(routing_rule.get("primary_strategy") or "text_prompt").strip() or "text_prompt"
     if revision_mode == "colorway_only":
         primary_strategy = "omni_reference"
@@ -316,6 +419,8 @@ def build_solution_plan(task: dict):
             recommended_capabilities.insert(0, "omni_reference")
         if "text_prompt" not in recommended_capabilities:
             recommended_capabilities.append("text_prompt")
+    elif revision_mode != "local_edit" and primary_strategy == "editor":
+        primary_strategy = "text_prompt"
     if primary_strategy not in recommended_capabilities:
         recommended_capabilities.insert(0, primary_strategy)
 
@@ -331,6 +436,7 @@ def build_solution_plan(task: dict):
             recommended_capabilities.append("style_reference")
 
     blocked_capabilities = normalize_string_list(routing_rule.get("blocked_capabilities"))
+    append_unique_many(blocked_capabilities, structured_knowledge.get("blocked_capabilities"))
     if revision_mode == "colorway_only":
         append_unique(blocked_capabilities, "repeat_batch")
         append_unique(blocked_capabilities, "draft_mode")
@@ -342,15 +448,35 @@ def build_solution_plan(task: dict):
         recommended_capabilities,
         blocked_capabilities,
     )
+    if revision_mode != "local_edit" and task_type == "image_edit":
+        recommended_capabilities = [
+            capability
+            for capability in recommended_capabilities
+            if capability not in {"editor", "vary_region", "pan_zoom", "retexture", "layers", "smart_select"}
+        ]
+        if primary_strategy == "editor":
+            primary_strategy = "text_prompt"
+        if primary_strategy not in recommended_capabilities:
+            recommended_capabilities.insert(0, primary_strategy)
+
+    structured_knowledge = build_structured_knowledge(knowledge_payload, task_model, recommended_capabilities)
+    append_unique_many(recommended_capabilities, structured_knowledge.get("recommended_capabilities"))
+    append_unique_many(blocked_capabilities, structured_knowledge.get("blocked_capabilities"))
 
     preset_key = select_parameter_preset(task_model)
     preset = parameter_payload.get("preset_bundles", {}).get(preset_key, {}) if preset_key else {}
+    parameters = normalize_string_list(preset.get("parameters"))
+    append_unique_many(parameters, structured_knowledge.get("parameter_preferences"))
+    optional_parameters = normalize_string_list(preset.get("optional_parameters"))
+    append_unique_many(optional_parameters, structured_knowledge.get("optional_parameters"))
+    avoid_parameters = normalize_string_list(preset.get("avoid_parameters"))
+    append_unique_many(avoid_parameters, structured_knowledge.get("avoid_parameters"))
     parameter_strategy = {
         "preset_key": preset_key,
         "goal": str(preset.get("goal") or "").strip(),
-        "parameters": normalize_string_list(preset.get("parameters")),
-        "optional_parameters": normalize_string_list(preset.get("optional_parameters")),
-        "avoid_parameters": normalize_string_list(preset.get("avoid_parameters")),
+        "parameters": normalize_string_list(parameters),
+        "optional_parameters": normalize_string_list(optional_parameters),
+        "avoid_parameters": normalize_string_list(avoid_parameters),
         "compatibility_warnings": normalize_string_list(parameter_payload.get("compatibility_warnings")),
     }
 
@@ -368,6 +494,8 @@ def build_solution_plan(task: dict):
         "iteration_strategy": build_iteration_strategy(task_model),
         "quality_target": build_quality_target(task_model),
         "diagnosis_focus": normalize_string_list(task_model.get("failure_modes")),
+        "structured_knowledge": structured_knowledge,
+        "reference_documents": structured_knowledge.get("reference_documents") or [],
         "readiness": revision_readiness,
         "built_at": now_iso(),
     }

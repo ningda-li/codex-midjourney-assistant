@@ -1,4 +1,28 @@
-﻿# Midjourney 编辑链玩法
+# Midjourney 编辑链玩法
+
+## 目录
+
+- 作用
+- 当前编辑链基线
+- 什么时候优先进 Editor
+- 什么时候不要急着进 Editor
+- Editor 里的几类动作
+  - 1. Move / Resize
+  - 2. Erase / Vary Region
+  - 3. Smart Select
+  - 4. Pan
+  - 5. Zoom Out
+  - 6. Remix
+  - 7. Retexture
+  - 8. Layers
+  - 9. Suggest Prompt
+- 外部图片编辑
+- 当前最重要的兼容提醒
+  - 1. Omni Reference 结果进编辑链前先降引用
+  - 2. 外部图层和编辑结果不会自动回主图库
+  - 3. 不要把编辑链当“更稳的重跑器”
+- 当前实战判断顺序
+
 
 ## 作用
 

@@ -1,21 +1,34 @@
 {
   "syntax": {
     "python": [
-      "scripts/startup_route.py",
-      "scripts/mode_route.py",
-      "scripts/first_run_check.py",
-      "scripts/task_classify.py",
-      "scripts/solution_plan_build.py",
-      "scripts/prompt_diagnose.py",
-      "scripts/prompt_strategy_select.py",
-      "scripts/manual_mode_prepare.py",
+      "scripts/brief_compile.py",
+      "scripts/common.py",
+      "scripts/experience_distill.py",
       "scripts/feedback_apply.py",
-      "scripts/project_context_merge.py",
-      "scripts/template_candidate_upsert.py",
-      "scripts/task_orchestrate.py",
-      "scripts/profile_signal_extract.py",
+      "scripts/first_run_check.py",
+      "scripts/manual_mode_prepare.py",
+      "scripts/memory_append.py",
+      "scripts/memory_retrieve.py",
+      "scripts/mode_route.py",
+      "scripts/next_action_decide.py",
+      "scripts/profile_correct.py",
+      "scripts/profile_forget.py",
       "scripts/profile_merge.py",
-      "scripts/experience_distill.py"
+      "scripts/profile_signal_extract.py",
+      "scripts/profile_view.py",
+      "scripts/project_context_merge.py",
+      "scripts/prompt_diagnose.py",
+      "scripts/reference_knowledge_retrieve.py",
+      "scripts/prompt_strategy_select.py",
+      "scripts/run_checkpoint.py",
+      "scripts/run_regression_suite.py",
+      "scripts/run_summary.py",
+      "scripts/solution_plan_build.py",
+      "scripts/startup_route.py",
+      "scripts/task_classify.py",
+      "scripts/task_orchestrate.py",
+      "scripts/task_state_init.py",
+      "scripts/template_candidate_upsert.py"
     ],
     "node": [
       "scripts/midjourney_isolated_browser_once.mjs"
@@ -26,6 +39,7 @@
       "scripts/window_state_probe.ps1",
       "scripts/window_control_gate.ps1",
       "scripts/midjourney_generate_once.ps1",
+      "scripts/midjourney_visible_window_submit.ps1",
       "scripts/midjourney_status_probe.ps1",
       "scripts/midjourney_window_capture.ps1"
     ]
@@ -193,6 +207,113 @@
         }
       }
     },
+    "subject_lock_feedback": {
+      "base_task": {
+        "task_id": "regression-subject-lock-task",
+        "project_id": "regression-subject-lock-project",
+        "mode": "manual",
+        "prompt_policy": "english_only",
+        "prompt_language": "en",
+        "round_index": 2,
+        "round_budget": 4,
+        "goal": "modern male game character, front-facing full-body standing pose",
+        "raw_request": "modern male game character, front-facing full-body standing pose",
+        "brief": {
+          "goal": "modern male game character, front-facing full-body standing pose",
+          "must_have": [
+            "正面全身站立"
+          ],
+          "style_bias": [
+            "game character design"
+          ],
+          "must_not_have": []
+        },
+        "subject_contract": {
+          "subject_type": "character",
+          "gender": "male",
+          "count": "single",
+          "age_band": "adult",
+          "role_labels": [
+            "game character"
+          ],
+          "view": "front",
+          "framing": "full_body",
+          "pose": "standing",
+          "identity_terms": [
+            "modern"
+          ],
+          "negative_constraints": [
+            "no women",
+            "no group"
+          ]
+        }
+      },
+      "feedback_message": "服装不够时尚，画风也不够时尚"
+    },
+    "verdict_subject_mismatch": {
+      "payload": {
+        "round_index": 2,
+        "round_budget": 4,
+        "result_available": true,
+        "should_continue": false,
+        "result_summary": "generated four female fashion characters",
+        "diagnosis_report": {
+          "observed_issues": [
+            "subject_mismatch",
+            "feedback_not_applied"
+          ]
+        },
+        "task_model": {
+          "revision_mode": "structure_refine"
+        }
+      }
+    },
+    "active_task_restore": {
+      "task": {
+        "task_id": "regression-active-task",
+        "project_id": "regression-active-project",
+        "startup_phase": "ready",
+        "task_phase": "automatic_ready_to_submit",
+        "mode": "automatic",
+        "automatic_execution_backend": "isolated_browser",
+        "prompt_policy": "english_only",
+        "prompt_language": "en",
+        "round_index": 2,
+        "round_budget": 4,
+        "goal": "modern male game character, front-facing full-body standing pose",
+        "raw_request": "modern male game character, front-facing full-body standing pose",
+        "brief": {
+          "goal": "modern male game character, front-facing full-body standing pose",
+          "must_have": [
+            "正面全身站立"
+          ],
+          "style_bias": [
+            "game character design"
+          ],
+          "must_not_have": []
+        },
+        "subject_contract": {
+          "subject_type": "character",
+          "gender": "male",
+          "count": "single",
+          "age_band": "adult",
+          "role_labels": [
+            "game character"
+          ],
+          "view": "front",
+          "framing": "full_body",
+          "pose": "standing",
+          "identity_terms": [
+            "modern"
+          ],
+          "negative_constraints": [
+            "no women",
+            "no group"
+          ]
+        }
+      },
+      "feedback_message": "服装不够时尚，画风也不够时尚"
+    },
     "colorway_next_action": {
       "payload": {
         "round_index": 3,
@@ -204,6 +325,109 @@
           "revision_mode": "colorway_only"
         }
       }
+    },
+    "colorway_base_approval": {
+      "unapproved_task": {
+        "artifacts": {
+          "final_capture": "latest-unapproved.png"
+        }
+      },
+      "unapproved_message": "try another colorway",
+      "approved_task": {
+        "artifacts": {
+          "final_capture": "latest-approved.png"
+        }
+      },
+      "approved_message": "就按这个换配色",
+      "expected_promoted_capture": "latest-approved.png"
+    },
+    "colorway_blocked_decision": {
+      "payload": {
+        "blocked_by_ui": true,
+        "blocked_reason": "prompt_region_unconfirmed",
+        "result_available": true,
+        "task_model": {
+          "revision_mode": "colorway_only"
+        }
+      }
+    },
+    "manual_colorway_reference": {
+      "task": {
+        "task_id": "regression-manual-colorway-reference",
+        "project_id": "regression-manual-colorway-reference",
+        "mode": "manual",
+        "prompt_policy": "english_only",
+        "round_index": 2,
+        "goal": "same male hero, try another colorway",
+        "brief": {
+          "goal": "same male hero, try another colorway",
+          "must_have": [
+            "正面全身站立"
+          ],
+          "style_bias": [
+            "游戏设计风格"
+          ],
+          "must_not_have": []
+        },
+        "accepted_base_reference": "locked-base.png",
+        "design_lock_state": "hard_locked",
+        "palette_request": {
+          "summary": "冷白石墨配色",
+          "top": [
+            "冷白"
+          ],
+          "bottom": [
+            "石墨灰"
+          ]
+        },
+        "revision_patch": {
+          "revision_mode": "colorway_only",
+          "change_axis": "palette",
+          "locked_elements": [
+            "face",
+            "hair",
+            "silhouette",
+            "garment_panels",
+            "material_map"
+          ],
+          "palette_request": {
+            "summary": "冷白石墨配色",
+            "top": [
+              "冷白"
+            ],
+            "bottom": [
+              "石墨灰"
+            ]
+          },
+          "accepted_base_reference": "locked-base.png",
+          "design_lock_state": "hard_locked"
+        }
+      },
+      "expected_reference_path": "locked-base.png"
+    },
+    "new_task_restart_routing": {
+      "task": {
+        "task_id": "regression-restart-routing-task",
+        "project_id": "regression-restart-routing-project",
+        "startup_phase": "ready",
+        "mode": "automatic",
+        "round_index": 3,
+        "goal": "做一个男性角色设计",
+        "brief": {
+          "goal": "做一个男性角色设计",
+          "must_have": [
+            "全身角色展示"
+          ],
+          "style_bias": [
+            "游戏设计风格"
+          ],
+          "must_not_have": []
+        }
+      },
+      "reset_message": "换个任务，做产品广告图",
+      "fresh_request_message": "做一张新的科幻女角色海报",
+      "restart_hint_message": "我们重开，换成古风角色",
+      "feedback_message": "我想看别的配色"
     },
     "template_candidate": {
       "threshold": 2,

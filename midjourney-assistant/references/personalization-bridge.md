@@ -1,4 +1,19 @@
-﻿# Personalization 与风格系统桥接
+# Personalization 与风格系统桥接
+
+## 目录
+
+- 当前基线
+- 这四类东西不是一回事
+  - 1. Personalization
+  - 2. Moodboards
+  - 3. Style Reference
+  - 4. Style Creator
+- Personalization 当前官方要点
+- Style Creator 当前官方技巧
+- Style Explorer 与风格系统
+- 实际判断顺序
+- 当前输出要求
+
 
 ## 当前基线
 

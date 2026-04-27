@@ -1,0 +1,357 @@
+{
+  "version": "2026-04-27",
+  "default_documents": [
+    {
+      "path": "midjourney-task-types.md",
+      "sections": ["作用", "核心业务规则"]
+    },
+    {
+      "path": "midjourney-capability-map.md",
+      "sections": ["选择总原则", "按任务类型的首选能力"]
+    },
+    {
+      "path": "midjourney-parameter-system.md",
+      "sections": ["总原则", "分阶段参数策略", "高风险组合"]
+    },
+    {
+      "path": "midjourney-iteration-strategy.md",
+      "sections": ["三阶段节奏", "反馈接入顺序"]
+    }
+  ],
+  "stage_rules": {
+    "explore": {
+      "rule_id": "stage.explore",
+      "prompt_cues": ["clear first-pass direction", "one main test axis"],
+      "avoid_prompt_cues": ["overloaded prompt constraints", "premature final polish"],
+      "submission_notes": ["探索轮优先验证方向，不要过早追求最终成品。"],
+      "reference_documents": [
+        {
+          "path": "midjourney-iteration-strategy.md",
+          "sections": ["三阶段节奏", "每轮只改一到两刀"]
+        }
+      ]
+    },
+    "converge": {
+      "rule_id": "stage.converge",
+      "prompt_cues": ["stabilized key direction", "controlled revision target"],
+      "avoid_prompt_cues": ["reopening the whole direction", "high randomness"],
+      "submission_notes": ["收敛轮只围绕关键问题调整，不要同时推翻主体和风格。"],
+      "reference_documents": [
+        {
+          "path": "midjourney-iteration-strategy.md",
+          "sections": ["三阶段节奏", "反馈接入顺序"]
+        }
+      ]
+    },
+    "finalize": {
+      "rule_id": "stage.finalize",
+      "prompt_cues": ["production-ready finish", "clean final delivery"],
+      "avoid_prompt_cues": ["new style family", "new subject branch"],
+      "submission_notes": ["成品确认轮只做交付级收尾，不要重新发散方向。"],
+      "reference_documents": [
+        {
+          "path": "midjourney-iteration-strategy.md",
+          "sections": ["结束条件"]
+        }
+      ]
+    }
+  },
+  "revision_mode_rules": {
+    "new_direction": {
+      "rule_id": "revision.new_direction",
+      "prompt_cues": ["fresh visual direction"],
+      "submission_notes": ["新方向可以重新打开主体和风格，但仍要保持一个明确主轴。"]
+    },
+    "structure_refine": {
+      "rule_id": "revision.structure_refine",
+      "prompt_cues": ["preserve validated identity", "refine only the requested structure"],
+      "avoid_prompt_cues": ["unrequested identity changes"],
+      "submission_notes": ["结构微调轮要保留已正确的主体和风格，只改指定结构。"]
+    },
+    "colorway_only": {
+      "rule_id": "revision.colorway_only",
+      "prompt_cues": ["single readable colorway variant", "preserve the approved design"],
+      "prompt_negative_cues": ["different face", "changed silhouette", "redesigned garment panels"],
+      "avoid_prompt_cues": ["silhouette changes", "face changes", "garment panel redesign"],
+      "blocked_capabilities": ["repeat_batch", "draft_mode", "weird_heavy"],
+      "submission_notes": ["配色轮只允许改颜色分配，不允许顺手改脸、发型、版型、服装分区和材质关系。"],
+      "reference_documents": [
+        {
+          "path": "midjourney-failure-patterns.md",
+          "sections": ["失败模式 7：反馈没有真正并入下一轮", "失败模式 8：探索和收敛阶段混用"]
+        }
+      ]
+    },
+    "finish_only": {
+      "rule_id": "revision.finish_only",
+      "prompt_cues": ["keep the current design", "improve cleanliness and premium finish"],
+      "avoid_prompt_cues": ["new direction", "new main subject"],
+      "submission_notes": ["收尾轮只提高干净度、质感和交付完成度。"]
+    },
+    "local_edit": {
+      "rule_id": "revision.local_edit",
+      "prompt_cues": ["local edit only", "preserve the rest of the image"],
+      "recommended_capabilities": ["editor", "vary_region"],
+      "prompt_negative_cues": ["whole-image redesign"],
+      "avoid_prompt_cues": ["global redesign"],
+      "submission_notes": ["局部编辑只描述选区里要改的内容，不要把整张图重新跑掉。"],
+      "reference_documents": [
+        {
+          "path": "midjourney-editor-playbook.md",
+          "sections": ["什么时候优先进 Editor", "Editor 里的几类动作"]
+        }
+      ]
+    }
+  },
+  "task_type_rules": {
+    "character_design": {
+      "rule_id": "task.character_design",
+      "prompt_cues": ["game character concept art", "clear costume silhouette", "readable design language"],
+      "prompt_negative_cues": ["unclear role identity", "confused costume materials"],
+      "avoid_prompt_cues": ["unclear role identity", "costume material confusion"],
+      "recommended_capabilities": ["text_prompt", "style_reference"],
+      "parameter_preferences": ["--ar 2:3"],
+      "submission_notes": ["角色设计先看身份、轮廓、服装语言和系列潜力。"],
+      "reference_documents": [
+        {
+          "path": "midjourney-style-taxonomy.md",
+          "sections": ["八个主风格家族", "风格词的拆法"]
+        },
+        {
+          "path": "midjourney-task-types.md",
+          "sections": ["第一层：`task_type`", "核心业务规则"]
+        }
+      ]
+    },
+    "character_sheet": {
+      "rule_id": "task.character_sheet",
+      "prompt_cues": ["front-facing full-body standing pose", "clean character design sheet presentation", "white or simple neutral background"],
+      "prompt_negative_cues": ["cropped body", "busy background"],
+      "avoid_prompt_cues": ["cropped body", "busy background"],
+      "recommended_capabilities": ["text_prompt", "raw_mode"],
+      "parameter_preferences": ["--ar 2:3", "--raw"],
+      "submission_notes": ["角色设定表优先保证全身完整、服装可读和背景干净。"],
+      "reference_documents": [
+        {
+          "path": "midjourney-parameter-system.md",
+          "sections": ["参数分组", "分阶段参数策略"]
+        }
+      ]
+    },
+    "proposal_visual": {
+      "rule_id": "task.proposal_visual",
+      "prompt_cues": ["selection-ready concept option", "clear visual direction"],
+      "prompt_negative_cues": ["weak variation", "unclear decision axis"],
+      "avoid_prompt_cues": ["weak variation", "unclear decision axis"],
+      "recommended_capabilities": ["text_prompt"],
+      "optional_parameters": ["--chaos 10"],
+      "submission_notes": ["方案探索要让方向差异可比较，而不是只换同义词。"],
+      "reference_documents": [
+        {
+          "path": "midjourney-iteration-strategy.md",
+          "sections": ["三阶段节奏", "每轮只改一到两刀"]
+        }
+      ]
+    },
+    "poster": {
+      "rule_id": "task.poster",
+      "prompt_cues": ["graphic poster composition", "clear negative space", "strong hero visual"],
+      "prompt_negative_cues": ["crowded layout", "unplanned text blocks"],
+      "avoid_prompt_cues": ["crowded layout", "unplanned text blocks"],
+      "recommended_capabilities": ["text_prompt", "style_reference"],
+      "parameter_preferences": ["--ar 3:4"],
+      "submission_notes": ["海报图要优先控制主体、视觉重心、留白和光线，不要把文字排版交给 prompt 硬赌。"],
+      "reference_documents": [
+        {
+          "path": "midjourney-advanced-prompting.md",
+          "sections": ["当前最稳的 prompt 结构", "当前仍然有效的官方提示词技巧"]
+        }
+      ]
+    },
+    "scene_concept": {
+      "rule_id": "task.scene_concept",
+      "prompt_cues": ["layered environment concept", "clear spatial depth", "atmospheric lighting"],
+      "prompt_negative_cues": ["flat space", "unclear focal point"],
+      "avoid_prompt_cues": ["flat space", "unclear focal point"],
+      "recommended_capabilities": ["text_prompt", "image_prompt"],
+      "submission_notes": ["场景概念先锁空间层次、气氛和叙事信号。"],
+      "reference_documents": [
+        {
+          "path": "midjourney-reference-strategy.md",
+          "sections": ["先判断参考图职责", "六类参考策略"]
+        }
+      ]
+    },
+    "product_visual": {
+      "rule_id": "task.product_visual",
+      "prompt_cues": ["premium product visualization", "controlled studio lighting", "clean commercial background", "material accuracy"],
+      "prompt_negative_cues": ["shape drift", "distracting props"],
+      "avoid_prompt_cues": ["early art-style stacking", "shape drift", "distracting props"],
+      "recommended_capabilities": ["text_prompt", "raw_mode", "omni_reference"],
+      "parameter_preferences": ["--raw"],
+      "submission_notes": ["产品图先控制主体、形状、材质、光线和背景，不要一开始堆艺术风格。"],
+      "reference_documents": [
+        {
+          "path": "midjourney-parameter-system.md",
+          "sections": ["总原则", "参数分组"]
+        },
+        {
+          "path": "midjourney-reference-strategy.md",
+          "sections": ["先判断参考图职责", "混用优先级"]
+        }
+      ]
+    },
+    "brand_visual_direction": {
+      "rule_id": "task.brand_visual_direction",
+      "prompt_cues": ["coherent brand visual direction", "project-level visual range"],
+      "prompt_negative_cues": ["uncontrolled mood drift"],
+      "avoid_prompt_cues": ["one-off style accident", "uncontrolled mood drift"],
+      "recommended_capabilities": ["text_prompt", "moodboard", "personalization"],
+      "submission_notes": ["品牌方向要建立可延展的视觉范围，不要只追一张偶然好看的图。"],
+      "reference_documents": [
+        {
+          "path": "personalization-bridge.md",
+          "sections": ["这四类东西不是一回事", "实际判断顺序"]
+        }
+      ]
+    },
+    "continuity_batch": {
+      "rule_id": "task.continuity_batch",
+      "prompt_cues": ["consistent subject identity", "same design language across the set"],
+      "prompt_negative_cues": ["identity drift"],
+      "avoid_prompt_cues": ["identity drift", "style reference replacing subject identity"],
+      "recommended_capabilities": ["omni_reference", "text_prompt"],
+      "submission_notes": ["连续性任务优先保身份和结构，风格参考只能做辅助。"],
+      "reference_documents": [
+        {
+          "path": "midjourney-reference-strategy.md",
+          "sections": ["六类参考策略", "混用优先级"]
+        }
+      ]
+    },
+    "reference_driven": {
+      "rule_id": "task.reference_driven",
+      "prompt_cues": ["retain key identity cues", "preserve the reference-driven design language"],
+      "prompt_negative_cues": ["mixed reference roles"],
+      "avoid_prompt_cues": ["mixed subject and style reference roles"],
+      "recommended_capabilities": ["image_prompt", "style_reference", "text_prompt"],
+      "submission_notes": ["参考图必须先分清职责：主体、风格、构图或项目方向不能混着写。"],
+      "reference_documents": [
+        {
+          "path": "midjourney-reference-strategy.md",
+          "sections": ["先判断参考图职责", "六类参考策略", "常见错误"]
+        }
+      ]
+    },
+    "image_edit": {
+      "rule_id": "task.image_edit",
+      "prompt_cues": ["targeted edit request", "preserve unchanged regions"],
+      "prompt_negative_cues": ["whole-image redesign"],
+      "avoid_prompt_cues": ["whole-image redesign"],
+      "recommended_capabilities": ["editor"],
+      "submission_notes": ["改图任务先判断是局部编辑、扩图、重贴图还是整体重跑。"],
+      "reference_documents": [
+        {
+          "path": "midjourney-editor-playbook.md",
+          "sections": ["当前编辑链基线", "什么时候优先进 Editor", "什么时候不要急着进 Editor"]
+        }
+      ]
+    },
+    "video_generation": {
+      "rule_id": "task.video_generation",
+      "prompt_cues": ["subtle motion continuity", "stable starting-frame motion"],
+      "prompt_negative_cues": ["overwritten starting frame"],
+      "avoid_prompt_cues": ["image-chain parameter carryover", "overwritten starting frame"],
+      "recommended_capabilities": ["video_generation"],
+      "parameter_preferences": ["--motion low"],
+      "submission_notes": ["视频链以起始帧和运动意图为核心，不要继承静态图的一整套图片参数。"],
+      "reference_documents": [
+        {
+          "path": "midjourney-video-playbook.md",
+          "sections": ["当前官方基线", "当前可用输入", "当前参数边界", "运动模式"]
+        }
+      ]
+    },
+    "style_system_build": {
+      "rule_id": "task.style_system_build",
+      "prompt_cues": ["coherent style family", "reusable style language", "style-code-ready aesthetic system"],
+      "prompt_negative_cues": ["single-subject overfitting"],
+      "avoid_prompt_cues": ["single-subject overfitting", "unlabeled style variables"],
+      "recommended_capabilities": ["style_creator", "style_explorer"],
+      "submission_notes": ["风格系统要把风格探索和交付 prompt 分开，目标是可复用风格语言。"],
+      "reference_documents": [
+        {
+          "path": "personalization-bridge.md",
+          "sections": ["Style Creator 当前官方技巧", "Style Explorer 与风格系统", "实际判断顺序"]
+        },
+        {
+          "path": "midjourney-style-taxonomy.md",
+          "sections": ["使用原则", "风格词的拆法"]
+        }
+      ]
+    }
+  },
+  "capability_rules": {
+    "style_reference": {
+      "rule_id": "capability.style_reference",
+      "submission_notes": ["Style Reference 只负责视觉风格和完成度，不要拿它锁脸或锁产品结构。"],
+      "reference_documents": [
+        {
+          "path": "midjourney-reference-strategy.md",
+          "sections": ["六类参考策略", "混用优先级"]
+        }
+      ]
+    },
+    "omni_reference": {
+      "rule_id": "capability.omni_reference",
+      "submission_notes": ["Omni Reference 用来锁人物或物体身份，风格控制要另行处理。"],
+      "reference_documents": [
+        {
+          "path": "midjourney-reference-strategy.md",
+          "sections": ["六类参考策略", "混用优先级"]
+        }
+      ]
+    },
+    "raw_mode": {
+      "rule_id": "capability.raw_mode",
+      "prompt_cues": ["literal prompt obedience"],
+      "submission_notes": ["Raw 更适合产品图、设定表和需要服从 prompt 的任务。"],
+      "reference_documents": [
+        {
+          "path": "midjourney-parameter-system.md",
+          "sections": ["参数分组"]
+        }
+      ]
+    },
+    "draft_mode": {
+      "rule_id": "capability.draft_mode",
+      "submission_notes": ["Draft 只适合快速试方向，不能当最终质量判断。"],
+      "reference_documents": [
+        {
+          "path": "midjourney-advanced-prompting.md",
+          "sections": ["`--draft` 的正确用法"]
+        }
+      ]
+    },
+    "repeat_batch": {
+      "rule_id": "capability.repeat_batch",
+      "submission_notes": ["Repeat 只适合 prompt 已稳定后的并行探索，不能替代需求判断。"],
+      "reference_documents": [
+        {
+          "path": "midjourney-advanced-prompting.md",
+          "sections": ["`--repeat` 的正确用法"]
+        }
+      ]
+    },
+    "seed_lock": {
+      "rule_id": "capability.seed_lock",
+      "submission_notes": ["Seed 可以支持对比实验，但不能当角色一致性方案。"],
+      "reference_documents": [
+        {
+          "path": "midjourney-advanced-prompting.md",
+          "sections": ["Seed 技巧"]
+        }
+      ]
+    }
+  }
+}

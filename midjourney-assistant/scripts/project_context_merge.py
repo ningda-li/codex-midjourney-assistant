@@ -7,6 +7,7 @@ from pathlib import Path
 from common import (
     configure_stdout,
     normalize_string_list,
+    normalize_subject_contract,
     now_iso,
     project_memory_path,
     read_json_file,
@@ -51,6 +52,7 @@ def empty_context(project_id: str):
         "design_lock_state": "",
         "accepted_base_reference": "",
         "locked_elements": [],
+        "subject_contract": {},
         "accepted_palette_history": [],
         "open_items": [],
         "template_candidate_keys": [],
@@ -104,6 +106,7 @@ def normalize_context(context: dict, project_id: str):
     normalized["design_lock_state"] = str(normalized.get("design_lock_state") or "").strip()
     normalized["accepted_base_reference"] = str(normalized.get("accepted_base_reference") or "").strip()
     normalized["locked_elements"] = normalize_string_list(normalized.get("locked_elements"))
+    normalized["subject_contract"] = normalize_subject_contract(normalized.get("subject_contract"))
     normalized["accepted_palette_history"] = normalize_string_list(normalized.get("accepted_palette_history"))
     normalized["open_items"] = normalize_string_list(normalized.get("open_items"))
     normalized["template_candidate_keys"] = normalize_string_list(normalized.get("template_candidate_keys"))
@@ -244,6 +247,9 @@ def apply_context_to_task(task: dict, context: dict):
     updated["project_stage"] = str(snapshot.get("project_stage") or updated.get("project_stage") or "").strip()
     updated["workflow_status"] = str(snapshot.get("workflow_status") or updated.get("workflow_status") or "").strip()
     updated["project_consistency_rules"] = normalize_string_list(snapshot.get("consistency_rules"))
+    updated["subject_contract"] = normalize_subject_contract(
+        updated.get("subject_contract") or snapshot.get("subject_contract")
+    )
     updated["accepted_base_reference"] = str(
         updated.get("accepted_base_reference") or snapshot.get("accepted_base_reference") or ""
     ).strip()
@@ -439,7 +445,7 @@ def build_context_from_task(task: dict, existing: dict):
     context["workflow_status"] = infer_workflow_status(task)
     context["active_batch_label"] = derive_batch_label(task)
     context["latest_goal"] = str(task.get("goal") or context.get("latest_goal") or "").strip()
-    brief_summary = build_brief_summary(task.get("brief") or {})
+    brief_summary = build_brief_summary(task)
     if brief_summary:
         context["brief_summary"] = brief_summary
     context["latest_prompt"] = str(task.get("current_prompt") or context.get("latest_prompt") or "").strip()
@@ -457,6 +463,9 @@ def build_context_from_task(task: dict, existing: dict):
     context["design_lock_state"] = build_design_lock_state(task, context)
     context["accepted_base_reference"] = build_accepted_base_reference(task, context)
     context["locked_elements"] = build_locked_elements(task, context)
+    context["subject_contract"] = normalize_subject_contract(
+        task.get("subject_contract") or context.get("subject_contract")
+    )
     context["accepted_palette_history"] = build_palette_history(task, context)
     context["round_index"] = max(int(context.get("round_index") or 0), int(task.get("round_index") or 1))
     context["persistent_must_have"] = strategy["persistent_must_have"]

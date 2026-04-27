@@ -4,11 +4,49 @@ import re
 import sys
 from pathlib import Path
 
-from common import ASSET_ROOT, configure_stdout, normalize_string_list, now_iso, read_json_file, read_json_input
+from common import (
+    ASSET_ROOT,
+    configure_stdout,
+    infer_subject_contract,
+    merge_subject_contract,
+    normalize_string_list,
+    normalize_subject_contract,
+    now_iso,
+    read_json_file,
+    read_json_input,
+)
 
 
 TASK_SCHEMA_PATH = ASSET_ROOT / "task-type-schema.json"
 DEFAULT_LOCKED_ELEMENTS = ["face", "hair", "silhouette", "garment_panels", "material_map"]
+IMAGE_EDIT_EXPLICIT_KEYWORDS = [
+    "\u5c40\u90e8",
+    "\u5c40\u90e8\u91cd\u7ed8",
+    "\u5c40\u90e8\u4fee\u6539",
+    "\u5c40\u90e8\u7f16\u8f91",
+    "\u53ea\u6539",
+    "\u4fee\u8fd9\u4e2a\u533a\u57df",
+    "\u6539\u8fd9\u4e2a\u533a\u57df",
+    "\u7f16\u8f91\u8fd9\u5f20\u56fe",
+    "\u7f16\u8f91\u8fd9\u4e2a\u533a\u57df",
+    "\u6539\u8fd9\u5f20\u56fe",
+    "\u4fee\u8fd9\u5f20\u56fe",
+    "\u9009\u533a",
+    "\u906e\u7f69",
+    "\u6269\u56fe",
+    "\u8865\u8fb9",
+    "editor",
+    "vary region",
+    "zoom out",
+    "pan",
+    "retexture",
+    "inpaint",
+    "local edit",
+    "local repaint",
+    "edit this image",
+    "edit the image",
+    "edit this area",
+]
 
 TASK_KEYWORDS = {
     "video_generation": [
@@ -139,6 +177,9 @@ TASK_KEYWORDS = {
         "hero",
     ],
 }
+
+TASK_KEYWORDS["image_edit"] = IMAGE_EDIT_EXPLICIT_KEYWORDS[:]
+
 
 STYLE_KEYWORDS = [
     "无畏契约的设计风格",
@@ -360,6 +401,10 @@ def count_keyword_hits(text: str, keywords):
     return sum(1 for keyword in keywords if keyword_in_text(text, keyword))
 
 
+def has_explicit_image_edit_signal(text: str) -> bool:
+    return any(keyword_in_text(text, keyword) for keyword in IMAGE_EDIT_EXPLICIT_KEYWORDS)
+
+
 def has_reference_input(text: str) -> bool:
     return bool(re.search(r"https?://", text)) or any(token in text for token in ["参考图", "reference"])
 
@@ -378,7 +423,7 @@ def has_video_starting_frame_signal(task: dict, text: str) -> bool:
     return False
 
 
-def detect_task_type(task: dict, text: str):
+def detect_task_type(task: dict, text: str, subject_contract: dict):
     candidates = []
     for task_type, keywords in TASK_KEYWORDS.items():
         score = count_keyword_hits(text, keywords)
@@ -407,6 +452,16 @@ def detect_task_type(task: dict, text: str):
         reference_candidate = next(item for item in candidates if item["task_type"] == "reference_driven")
         if reference_candidate["score"] >= 2:
             return "reference_driven", candidates
+
+    if normalize_subject_contract(subject_contract).get("subject_type") == "character":
+        character_candidates = [
+            item
+            for item in candidates
+            if item["task_type"] in {"character_sheet", "character_design", "continuity_batch", "reference_driven"}
+        ]
+        if character_candidates:
+            character_candidates.sort(key=lambda item: (-item["score"], item["task_type"]))
+            return character_candidates[0]["task_type"], candidates
 
     if any(item["task_type"] == "character_sheet" for item in candidates):
         sheet_candidate = next(item for item in candidates if item["task_type"] == "character_sheet")
@@ -539,16 +594,38 @@ def get_accepted_base_reference(task: dict) -> str:
     return ""
 
 
-def detect_revision_mode(task: dict, text: str, task_type: str, task_stage: str) -> str:
+def get_subject_contract(task: dict):
+    project_context = get_project_context(task)
+    subject_contract = merge_subject_contract(
+        project_context.get("subject_contract"),
+        task.get("subject_contract"),
+    )
+    subject_contract = merge_subject_contract(
+        subject_contract,
+        infer_subject_contract(
+            str(task.get("raw_request") or task.get("goal") or ""),
+            task.get("brief"),
+            subject_contract,
+        ),
+    )
+    return normalize_subject_contract(subject_contract)
+
+
+def detect_revision_mode(task: dict, text: str, task_type: str, task_stage: str, subject_contract: dict) -> str:
     project_context = get_project_context(task)
     revision_patch = task.get("revision_patch") if isinstance(task.get("revision_patch"), dict) else {}
     existing_model = task.get("task_model") if isinstance(task.get("task_model"), dict) else {}
     patched_mode = str(revision_patch.get("revision_mode") or "").strip()
     existing_mode = str(existing_model.get("revision_mode") or project_context.get("latest_revision_mode") or "").strip()
+    normalized_contract = normalize_subject_contract(subject_contract)
+    has_subject_anchor = bool(
+        normalized_contract.get("subject_type")
+        or normalized_contract.get("gender")
+        or normalized_contract.get("count")
+        or normalize_string_list(normalized_contract.get("role_labels"))
+    )
     if patched_mode:
         return patched_mode
-    if task_type == "image_edit":
-        return "local_edit"
     if any(keyword_in_text(text, keyword) for keyword in COLORWAY_KEYWORDS):
         return "colorway_only"
     if task_stage == "finalize" or any(keyword_in_text(text, keyword) for keyword in FINISH_ONLY_HINTS):
@@ -557,6 +634,10 @@ def detect_revision_mode(task: dict, text: str, task_type: str, task_stage: str)
         return "new_direction"
     if any(keyword_in_text(text, keyword) for keyword in STRUCTURE_REFINE_HINTS):
         return "structure_refine"
+    if task_type == "image_edit":
+        return "local_edit"
+    if has_subject_anchor and max(1, int(task.get("round_index") or 1)) > 1:
+        return existing_mode or "structure_refine"
     if max(1, int(task.get("round_index") or 1)) > 1:
         return existing_mode or "structure_refine"
     if task_type in {"continuity_batch", "reference_driven", "character_sheet"}:
@@ -601,9 +682,10 @@ def detect_locked_elements(task: dict, text: str, task_type: str, revision_mode:
     return locked_elements
 
 
-def detect_lock_state(task: dict, text: str, revision_mode: str, locked_elements):
+def detect_lock_state(task: dict, text: str, revision_mode: str, locked_elements, subject_contract: dict):
     revision_patch = task.get("revision_patch") if isinstance(task.get("revision_patch"), dict) else {}
     project_context = get_project_context(task)
+    normalized_contract = normalize_subject_contract(subject_contract)
     for candidate in [
         revision_patch.get("design_lock_state"),
         task.get("design_lock_state"),
@@ -615,6 +697,13 @@ def detect_lock_state(task: dict, text: str, revision_mode: str, locked_elements
     accepted_base_reference = get_accepted_base_reference(task)
     if revision_mode == "colorway_only" and accepted_base_reference:
         return "hard_locked"
+    if revision_mode in {"structure_refine", "finish_only"} and (
+        locked_elements
+        or normalized_contract.get("subject_type")
+        or normalized_contract.get("gender")
+        or normalized_contract.get("count")
+    ):
+        return "soft_locked"
     if locked_elements or any(keyword_in_text(text, keyword) for keyword in LOCK_STRONG_KEYWORDS + LOCK_SOFT_KEYWORDS):
         return "soft_locked"
     return "unlocked"
@@ -657,13 +746,14 @@ def build_risk_flags(task: dict, candidates, task_type: str, reference_role: str
 def classify_task(task: dict):
     schema = load_schema()
     text = build_source_text(task)
-    task_type, candidates = detect_task_type(task, text)
+    subject_contract = get_subject_contract(task)
+    task_type, candidates = detect_task_type(task, text, subject_contract)
     defaults = schema_defaults(schema, task_type)
     task_stage = detect_stage(task, text, task_type)
-    revision_mode = detect_revision_mode(task, text, task_type, task_stage)
+    revision_mode = detect_revision_mode(task, text, task_type, task_stage, subject_contract)
     change_axis = detect_change_axis(revision_mode)
     locked_elements = detect_locked_elements(task, text, task_type, revision_mode)
-    lock_state = detect_lock_state(task, text, revision_mode, locked_elements)
+    lock_state = detect_lock_state(task, text, revision_mode, locked_elements, subject_contract)
     reference_role = detect_reference_role(text) if task_type == "reference_driven" else ""
     accepted_base_reference = get_accepted_base_reference(task)
 
@@ -675,6 +765,7 @@ def classify_task(task: dict):
         "lock_state": lock_state,
         "locked_elements": locked_elements,
         "accepted_base_reference": accepted_base_reference,
+        "subject_contract": subject_contract,
         "deliverable_type": str(defaults.get("default_deliverable") or "single_direction_frame").strip(),
         "subject_type": detect_subject_type(task_type, text),
         "style_goal": extract_style_goal(task, text),
@@ -692,6 +783,7 @@ def classify_task(task: dict):
     }
 
     updated_task = dict(task)
+    updated_task["subject_contract"] = subject_contract
     updated_task["task_model"] = task_model
     updated_task["task_phase"] = "task_classified"
     updated_task["updated_at"] = now_iso()

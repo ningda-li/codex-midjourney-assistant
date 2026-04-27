@@ -3,7 +3,14 @@ import json
 import sys
 from pathlib import Path
 
-from common import configure_stdout, infer_run_verdict, now_iso, read_json_file, read_json_input
+from common import (
+    configure_stdout,
+    diagnosis_blocks_success,
+    infer_run_verdict,
+    now_iso,
+    read_json_file,
+    read_json_input,
+)
 
 
 VERDICT_SUMMARIES = {
@@ -81,7 +88,12 @@ def decide_next_action(payload: dict):
     if verdict == "usable_but_iterate" and round_index >= round_budget:
         verdict = "stopped_by_budget"
 
-    if revision_mode == "colorway_only" and verdict == "usable_but_iterate" and payload.get("result_available"):
+    if (
+        revision_mode == "colorway_only"
+        and verdict == "usable_but_iterate"
+        and payload.get("result_available")
+        and not diagnosis_blocks_success(payload)
+    ):
         verdict = "success"
 
     if verdict == "success":

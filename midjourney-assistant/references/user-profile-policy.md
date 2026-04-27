@@ -17,9 +17,9 @@
 6. `quality_tendency`
 7. `updated_at`
 
-## signal 与自动提升
+## signal 与提升
 
-阶段 2 起，自动模式真实执行完成后会先提取画像候选，再写入 signal：
+只有用户明确要求记录、复盘或排障，或调用方显式传入 `--allow-memory-writeback` 时，自动模式真实执行完成后才允许提取画像候选并写入 signal：
 1. `style_preferences` 写入 `type=style`
 2. `content_preferences` 写入 `type=content`
 3. `work_types` 写入 `type=work_type`
@@ -27,7 +27,7 @@
 5. `industry` 写入 `type=industry`
 6. `quality_tendency` 写入 `type=quality_tendency`
 
-默认规则：
+提升规则：
 1. 单次候选先写 signal，不直接进入稳定画像
 2. 同一 signal 累计达到 2 次后，自动提升为稳定画像
 3. `promote_to_profile=true`、`confirmed=true` 或高置信候选可直接提升
@@ -42,15 +42,15 @@
 
 ## 控制面
 
-阶段 2 起，用户画像必须支持最小控制面：
+用户画像必须支持最小控制面：
 1. 查看：`scripts/profile_view.py`
 2. 纠正：`scripts/profile_correct.py`
 3. 遗忘：`scripts/profile_forget.py`
 
 ## 主链接入
 
-自动模式真实执行一轮后，按下面顺序处理：
+显式允许写回时，自动模式真实执行一轮后按下面顺序处理：
 1. `scripts/profile_signal_extract.py`
 2. `scripts/profile_merge.py`
 
-这条链默认只在自动模式真实执行完成后触发；手动模式当前不自动提取画像 signal。
+普通生图、普通手动 prompt 交付、普通自动执行后默认不触发这条链；手动模式当前不自动提取画像 signal。

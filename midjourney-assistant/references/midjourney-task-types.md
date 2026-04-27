@@ -1,4 +1,18 @@
-﻿# Midjourney 任务类型
+# Midjourney 任务类型
+
+## 目录
+
+- 作用
+- 第一层：`task_type`
+- 第二层：`task_stage`
+- 第三层：`revision_mode`
+- 第四层：`lock_state`
+- 核心业务规则
+  - 1. `换配色` 不是 `继续重画角色`
+  - 2. 没有基底锁定，不做真配色
+  - 3. `colorway_only` 必须是单变量
+- 任务建模输出要求
+
 
 ## 作用
 

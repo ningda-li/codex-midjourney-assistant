@@ -352,6 +352,50 @@ function isEnglishPromptText(text) {
   return /[A-Za-z]/.test(value);
 }
 
+function normalizeMatchPath(pathname) {
+  const value = String(pathname || "").trim();
+  if (!value) {
+    return "/";
+  }
+  const normalized = value.replace(/\/+$/g, "");
+  return normalized || "/";
+}
+
+function scoreTargetUrlMatch(targetUrl, expectedUrl) {
+  const current = String(targetUrl || "").trim();
+  const expected = String(expectedUrl || "").trim();
+  if (!current || !expected) {
+    return 0;
+  }
+  if (current === expected) {
+    return 5;
+  }
+  if (
+    current.startsWith(`${expected}?`)
+    || current.startsWith(`${expected}#`)
+    || current.startsWith(`${expected}/`)
+  ) {
+    return 4;
+  }
+  try {
+    const expectedParsed = new URL(expected);
+    const currentParsed = new URL(current);
+    if (expectedParsed.origin !== currentParsed.origin) {
+      return 0;
+    }
+    if (normalizeMatchPath(expectedParsed.pathname) === normalizeMatchPath(currentParsed.pathname)) {
+      return 3;
+    }
+    return 1;
+  } catch {
+    return 0;
+  }
+}
+
+function matchesExpectedPageUrl(targetUrl, expectedUrl) {
+  return scoreTargetUrlMatch(targetUrl, expectedUrl) >= 3;
+}
+
 async function fetchJson(url, options = {}) {
   const response = await fetch(url, options);
   if (!response.ok) {
@@ -696,13 +740,47 @@ function regionStatePriority(region) {
   return 99;
 }
 
-function selectTargetRegion(probe, baselineKeys, lockedRegionKey) {
-  const regions = Array.isArray(probe?.regions) ? probe.regions : [];
-  if (lockedRegionKey) {
-    return regions.find((region) => region.region_key === lockedRegionKey) || null;
+function getRegionArea(region) {
+  const width = Number(region?.region_bounds?.width || 0);
+  const height = Number(region?.region_bounds?.height || 0);
+  return Math.max(0, width) * Math.max(0, height);
+}
+
+function getRegionCenter(region) {
+  const bounds = region?.region_bounds || {};
+  const left = Number(bounds.left || 0);
+  const top = Number(bounds.top || 0);
+  const width = Number(bounds.width || 0);
+  const height = Number(bounds.height || 0);
+  return {
+    x: left + (width / 2),
+    y: top + (height / 2),
+  };
+}
+
+function scoreRegionAffinity(region, referenceRegion, baselineKeys) {
+  if (!region || !referenceRegion) {
+    return Number.POSITIVE_INFINITY;
   }
-  const newRegions = regions
-    .filter((region) => !baselineKeys.has(region.region_key))
+  const candidateArea = getRegionArea(region);
+  const referenceArea = Math.max(1, getRegionArea(referenceRegion));
+  const areaRatio = candidateArea > 0
+    ? Math.max(candidateArea / referenceArea, referenceArea / candidateArea)
+    : Number.POSITIVE_INFINITY;
+  const candidateCenter = getRegionCenter(region);
+  const referenceCenter = getRegionCenter(referenceRegion);
+  const distance = Math.hypot(candidateCenter.x - referenceCenter.x, candidateCenter.y - referenceCenter.y);
+  const baselinePenalty = baselineKeys.has(region.region_key) ? 20000 : 0;
+  const oversizedPenalty = areaRatio > 6 ? 10000 : 0;
+  const imageReward = Math.min(20, Number(region.region_image_count || 0)) * 10;
+  return baselinePenalty + oversizedPenalty + distance + (Math.abs(Math.log(areaRatio || 1)) * 1000) - imageReward;
+}
+
+function selectTargetRegion(probe, baselineKeys, lockedRegionKey, previousTargetRegion = null) {
+  const regions = Array.isArray(probe?.regions) ? probe.regions : [];
+  const probeStatus = String(probe?.status || "");
+  const sortRegions = (items) => items
+    .slice()
     .sort((left, right) => {
       const stateOrder = regionStatePriority(left) - regionStatePriority(right);
       if (stateOrder !== 0) return stateOrder;
@@ -711,21 +789,47 @@ function selectTargetRegion(probe, baselineKeys, lockedRegionKey) {
       }
       return (right.score || 0) - (left.score || 0);
     });
+
+  if (lockedRegionKey) {
+    const lockedRegion = regions.find((region) => region.region_key === lockedRegionKey);
+    if (lockedRegion) {
+      return lockedRegion;
+    }
+    if (probeStatus === "completed") {
+      const completedCandidates = regions.filter(
+        (region) => region.region_state === "completed" && Number(region.region_image_count || 0) > 0
+      );
+      if (previousTargetRegion) {
+        const completionMatch = completedCandidates
+          .slice()
+          .sort((left, right) => {
+            const affinityOrder = scoreRegionAffinity(left, previousTargetRegion, baselineKeys)
+              - scoreRegionAffinity(right, previousTargetRegion, baselineKeys);
+            if (affinityOrder !== 0) {
+              return affinityOrder;
+            }
+            return sortRegions([left, right])[0] === left ? -1 : 1;
+          });
+        if (completionMatch.length > 0) {
+          return completionMatch[0];
+        }
+      }
+      const completedRegions = sortRegions(completedCandidates);
+      if (completedRegions.length > 0) {
+        return completedRegions[0];
+      }
+    }
+  }
+  const newRegions = sortRegions(
+    regions
+    .filter((region) => !baselineKeys.has(region.region_key))
+  );
   if (newRegions.length > 0) {
     return newRegions[0];
   }
 
   if (baselineKeys.size === 0) {
-    const fallbackRegions = regions
-      .slice()
-      .sort((left, right) => {
-        const stateOrder = regionStatePriority(left) - regionStatePriority(right);
-        if (stateOrder !== 0) return stateOrder;
-        if ((left.region_bounds?.top || 0) !== (right.region_bounds?.top || 0)) {
-          return (left.region_bounds?.top || 0) - (right.region_bounds?.top || 0);
-        }
-        return (right.score || 0) - (left.score || 0);
-      });
+    const fallbackRegions = sortRegions(regions);
     if (fallbackRegions.length > 0) {
       return fallbackRegions[0];
     }
@@ -760,6 +864,28 @@ async function waitForReadyState(cdp, timeoutMs = 30000) {
     await delay(500);
   }
   throw new Error("页面加载超时");
+}
+
+async function waitForInteractiveInspection(cdp, expectedUrl, timeoutMs = 30000) {
+  const deadline = Date.now() + timeoutMs;
+  let lastInspection = null;
+  while (Date.now() < deadline) {
+    const inspection = await evaluateValue(cdp, buildPageInspectionExpression());
+    lastInspection = inspection;
+    if (inspection?.challenge || inspection?.loginHints || inspection?.inputReady) {
+      return inspection;
+    }
+    if (matchesExpectedPageUrl(inspection?.url, expectedUrl)) {
+      await delay(500);
+      continue;
+    }
+    if (String(inspection?.url || "").trim() === "about:blank") {
+      await delay(500);
+      continue;
+    }
+    await delay(500);
+  }
+  return lastInspection;
 }
 
 async function ensureDebugBrowser(args, statePayload) {
@@ -819,33 +945,22 @@ async function ensureDebugBrowser(args, statePayload) {
 }
 
 async function getOrCreateMidjourneyTarget(args) {
-  const matchesTarget = (targetUrl) => {
-    const current = String(targetUrl || "");
-    if (!current) {
-      return false;
-    }
-    if (current === args.pageUrl || current.startsWith(args.pageUrl)) {
-      return true;
-    }
-    if (args.pageUrl.startsWith("http://") || args.pageUrl.startsWith("https://")) {
-      try {
-        const expected = new URL(args.pageUrl);
-        const actual = new URL(current);
-        return expected.origin === actual.origin;
-      } catch {
-        return false;
-      }
-    }
-    return false;
-  };
+  const pickBestTarget = (targets) => targets
+    .filter((target) => target.type === "page")
+    .map((target) => ({
+      ...target,
+      __matchScore: scoreTargetUrlMatch(target.url, args.pageUrl),
+    }))
+    .filter((target) => target.__matchScore >= 3)
+    .sort((left, right) => right.__matchScore - left.__matchScore)[0] || null;
 
   let targets = await fetchJson(`http://127.0.0.1:${args.port}/json/list`);
-  let pageTarget = targets.find((target) => target.type === "page" && matchesTarget(target.url));
+  let pageTarget = pickBestTarget(targets);
   if (!pageTarget) {
     await fetchJson(`http://127.0.0.1:${args.port}/json/new?${encodeURIComponent(args.pageUrl)}`, { method: "PUT" });
     await delay(1000);
     targets = await fetchJson(`http://127.0.0.1:${args.port}/json/list`);
-    pageTarget = targets.find((target) => target.type === "page" && matchesTarget(target.url));
+    pageTarget = pickBestTarget(targets);
   }
   if (!pageTarget) {
     throw new Error("未找到 Midjourney 目标页");
@@ -1010,12 +1125,16 @@ async function main() {
   try {
     await cdp.call("Page.enable");
     await cdp.call("Runtime.enable");
-    if (String(targetInfo.pageTarget.url || "") !== args.pageUrl) {
+    const currentUrl = await evaluateValue(cdp, "String(location.href || '')");
+    if (!matchesExpectedPageUrl(currentUrl, args.pageUrl)) {
       await cdp.call("Page.navigate", { url: args.pageUrl });
     }
     await waitForReadyState(cdp);
-
-    const inspection = await evaluateValue(cdp, buildPageInspectionExpression());
+    const inspection = await waitForInteractiveInspection(
+      cdp,
+      args.pageUrl,
+      Math.max(5000, Math.min(args.startTimeoutSec * 1000, 30000)),
+    );
     if (inspection.challenge) {
       const result = {
         ...metadata,
@@ -1106,8 +1225,8 @@ async function main() {
     while (Date.now() < startDeadline) {
       await delay(args.pollIntervalMs);
       const probe = await evaluateValue(cdp, buildStatusExpression(promptNeedle));
-      const targetRegion = selectTargetRegion(probe, baselineRegionKeys, lockedRegionKey);
-      if (targetRegion && !lockedRegionKey) {
+      const targetRegion = selectTargetRegion(probe, baselineRegionKeys, lockedRegionKey, finalTargetRegion);
+      if (targetRegion && targetRegion.region_key !== lockedRegionKey) {
         lockedRegionKey = targetRegion.region_key;
       }
       if (targetRegion) {
@@ -1138,8 +1257,8 @@ async function main() {
     while (!completed && !blockedReason && Date.now() < completeDeadline) {
       await delay(args.pollIntervalMs);
       const probe = await evaluateValue(cdp, buildStatusExpression(promptNeedle));
-      const targetRegion = selectTargetRegion(probe, baselineRegionKeys, lockedRegionKey);
-      if (targetRegion && !lockedRegionKey) {
+      const targetRegion = selectTargetRegion(probe, baselineRegionKeys, lockedRegionKey, finalTargetRegion);
+      if (targetRegion && targetRegion.region_key !== lockedRegionKey) {
         lockedRegionKey = targetRegion.region_key;
       }
       if (targetRegion) {

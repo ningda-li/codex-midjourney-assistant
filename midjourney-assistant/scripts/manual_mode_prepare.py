@@ -6,6 +6,7 @@ from pathlib import Path
 
 from common import (
     PROMPT_POLICY_ENGLISH_ONLY,
+    build_subject_prompt_segments,
     configure_stdout,
     is_english_prompt_text,
     load_prompt_terminology,
@@ -32,6 +33,30 @@ REQUEST_NOISE_PATTERNS = [
     re.compile(r"\b来(?:一个|一张|一套)?", re.I),
     re.compile(r"\b给我(?:一个|一张|一套)?", re.I),
     re.compile(r"(?:需要|要求|希望|带有|包含|具备)", re.I),
+]
+
+RELAXED_STRICT_FIELDS = {"goal", "feedback"}
+
+SOFT_TRANSLATION_PATTERNS = [
+    (re.compile(r"具体内容[^，。；;]*?(?:你自己去想|自由发挥|随意发挥|自行设计|你来设计|你看着办)"), "original details"),
+    (re.compile(r"(?:你自己去想|自由发挥|随意发挥|自行设计|你来设计|你看着办)"), "original details"),
+    (re.compile(r"现代男性游戏角色"), "modern male game character"),
+    (re.compile(r"现代女性游戏角色"), "modern female game character"),
+    (re.compile(r"现代男性角色"), "modern male character"),
+    (re.compile(r"现代女性角色"), "modern female character"),
+    (re.compile(r"游戏角色"), "game character"),
+    (re.compile(r"服装(?:要|得|需)?(?:足够|比较|更)?时尚潮流"), "fashion-forward outfit"),
+    (re.compile(r"时尚潮流(?:的)?服装"), "fashion-forward outfit"),
+    (re.compile(r"潮流服装"), "fashion-forward outfit"),
+    (re.compile(r"时尚潮流"), "fashion-forward"),
+    (re.compile(r"现代"), "modern"),
+]
+
+SOFT_REMOVE_PATTERNS = [
+    re.compile(r"具体内容"),
+    re.compile(r"足够"),
+    re.compile(r"比较"),
+    re.compile(r"更"),
 ]
 
 
@@ -227,6 +252,25 @@ def iter_terminology_pairs():
     return sorted(phrases.items(), key=lambda item: len(item[0]), reverse=True)
 
 
+def apply_soft_cn_translation_fallbacks(text: str) -> str:
+    translated = str(text or "")
+    for pattern, target in SOFT_TRANSLATION_PATTERNS:
+        translated = pattern.sub(f" {target} ", translated)
+    for pattern in SOFT_REMOVE_PATTERNS:
+        translated = pattern.sub(" ", translated)
+    return translated
+
+
+def cleanup_translated_fragment(text: str) -> str:
+    translated = re.sub(r"[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]+", " ", str(text or ""))
+    translated = normalize_prompt_text(translated)
+    translated = re.sub(r"\bcreate create\b", "create", translated, flags=re.I)
+    translated = re.sub(r"\band and\b", "and", translated, flags=re.I)
+    translated = re.sub(r"\boriginal details\b", "", translated, flags=re.I)
+    translated = normalize_prompt_text(translated)
+    return translated
+
+
 def translate_cn_fragment_to_en(text: str, strict: bool = False, field_label: str = "约束") -> str:
     value = strip_request_noise(text)
     if not value:
@@ -234,17 +278,19 @@ def translate_cn_fragment_to_en(text: str, strict: bool = False, field_label: st
     if is_english_prompt_text(value):
         return normalize_prompt_text(value)
 
-    translated = value
     for source, target in iter_terminology_pairs():
-        translated = re.sub(re.escape(source), f" {target} ", translated)
+        value = re.sub(re.escape(source), f" {target} ", value)
+    translated = apply_soft_cn_translation_fallbacks(value)
 
     if strict and has_cjk_characters(translated):
-        raise ValueError(f"{field_label}存在未收录中文术语：{value}")
+        relaxed_translated = cleanup_translated_fragment(translated)
+        if field_label in RELAXED_STRICT_FIELDS and has_letters(relaxed_translated):
+            translated = relaxed_translated
+        else:
+            raise ValueError(f"{field_label}存在未收录中文术语：{value}")
+    else:
+        translated = cleanup_translated_fragment(translated)
 
-    translated = re.sub(r"[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]+", " ", translated)
-    translated = normalize_prompt_text(translated)
-    translated = re.sub(r"\bcreate create\b", "create", translated, flags=re.I)
-    translated = re.sub(r"\band and\b", "and", translated, flags=re.I)
     if strict and (not has_letters(translated) or "?" in translated):
         raise ValueError(f"{field_label}翻译不完整：{value}")
     return translated
@@ -281,6 +327,22 @@ def collect_memory_snapshot(task: dict):
     return snapshot if isinstance(snapshot, dict) else {}
 
 
+def sanitize_memory_line(value: str) -> str:
+    line = normalize_prompt_text(str(value or ""))
+    if not line:
+        return ""
+    lowered = line.lower()
+    if line.startswith("#") or line.startswith("```"):
+        return ""
+    if re.match(r'^"?[a-z_]+"?\s*:', line, flags=re.I):
+        return ""
+    if line.startswith("{") or line.startswith("}") or line.startswith("[") or line.startswith("]"):
+        return ""
+    if any(token in lowered for token in ["task_id", "brief_summary", "result_summary", "prompt_excerpt", "updated_at"]):
+        return ""
+    return line
+
+
 def translate_memory_lines(values, field_label: str):
     translated = []
     warnings = []
@@ -295,27 +357,42 @@ def translate_memory_lines(values, field_label: str):
     return dedupe_preserve_order(translated), warnings
 
 
+def translate_memory_lines_for_prompt(values, field_label: str):
+    translated = []
+    warnings = []
+    for value in normalize_string_list(values):
+        sanitized = sanitize_memory_line(value)
+        if not sanitized:
+            continue
+        english = translate_cn_fragment_to_en(sanitized, strict=False, field_label=field_label)
+        if english and has_letters(english):
+            translated.append(english)
+        elif has_cjk_characters(sanitized):
+            warnings.append(f"{field_label} 含未收录术语，已跳过：{sanitized}")
+    return dedupe_preserve_order(translated), warnings
+
+
 def build_memory_guidance(task: dict):
     snapshot = collect_memory_snapshot(task)
-    preferred_work_types, work_type_warnings = translate_memory_lines(
+    preferred_work_types, work_type_warnings = translate_memory_lines_for_prompt(
         snapshot.get("profile_work_types"), "用户画像工作类型"
     )
-    preferred_style, style_warnings = translate_memory_lines(
+    preferred_style, style_warnings = translate_memory_lines_for_prompt(
         snapshot.get("profile_style_preferences"), "用户画像风格偏好"
     )
-    preferred_content, content_warnings = translate_memory_lines(
+    preferred_content, content_warnings = translate_memory_lines_for_prompt(
         snapshot.get("profile_content_preferences"), "用户画像内容偏好"
     )
-    taboo_terms, taboo_warnings = translate_memory_lines(
+    taboo_terms, taboo_warnings = translate_memory_lines_for_prompt(
         snapshot.get("profile_taboos"), "用户画像禁忌"
     )
-    project_hints, project_warnings = translate_memory_lines(
+    project_hints, project_warnings = translate_memory_lines_for_prompt(
         snapshot.get("project_memory_lines"), "项目连续性记忆"
     )
-    distilled_hints, distilled_warnings = translate_memory_lines(
+    distilled_hints, distilled_warnings = translate_memory_lines_for_prompt(
         snapshot.get("distilled_pattern_lines"), "蒸馏经验"
     )
-    site_notes, site_warnings = translate_memory_lines(
+    site_notes, site_warnings = translate_memory_lines_for_prompt(
         snapshot.get("site_change_lines"), "站点变化记忆"
     )
     quality_tendency = translate_cn_fragment_to_en(
@@ -350,7 +427,7 @@ def build_memory_guidance(task: dict):
         "distilled_hints": distilled_hints,
         "site_notes": site_notes,
         "visual_prompt_cues": dedupe_preserve_order(
-            preferred_style + preferred_content + project_hints + distilled_hints
+            preferred_style + preferred_content + project_hints
         ),
         "submission_notes": dedupe_preserve_order(submission_notes),
         "warnings": dedupe_preserve_order(warnings),
@@ -362,6 +439,7 @@ def build_prompt_text(task: dict, stage: str):
     strict_english = normalize_prompt_policy(task.get("prompt_policy")) == PROMPT_POLICY_ENGLISH_ONLY
     memory_guidance = build_memory_guidance(task)
     diagnosis_summary = build_diagnosis_summary(task)
+    subject_segments = build_subject_prompt_segments(task.get("subject_contract"))
 
     goal = translate_cn_fragment_to_en(
         brief.get("goal") or task.get("goal") or "",
@@ -376,6 +454,7 @@ def build_prompt_text(task: dict, stage: str):
         goal = infer_goal_fallback(task)
 
     segments = []
+    segments.extend(subject_segments)
     if goal:
         segments.append(goal)
     segments.extend(dedupe_preserve_order(must_have))
@@ -530,6 +609,7 @@ def prepare_task_prompt(task: dict, force_regenerate: bool = False):
             "project_id": task.get("project_id", ""),
             "prompt_stage": str(existing_package.get("prompt_stage") or stage).strip() or stage,
             "prompt_policy": prompt_policy,
+            "subject_contract": task.get("subject_contract") or {},
             "accepted_base_reference": str(
                 existing_package.get("accepted_base_reference") or task.get("accepted_base_reference") or ""
             ).strip(),

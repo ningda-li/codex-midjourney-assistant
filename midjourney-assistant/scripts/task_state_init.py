@@ -7,14 +7,18 @@ from pathlib import Path
 from brief_compile import normalize as compile_brief
 from common import (
     configure_stdout,
+    infer_subject_contract,
+    merge_subject_contract,
     new_task_id,
     normalize_automatic_backend,
     normalize_mode_label,
     normalize_prompt_policy,
+    normalize_string_list,
     now_iso,
     read_json_file,
     read_json_input,
     slugify_project_id,
+    subject_contract_to_brief_constraints,
 )
 
 
@@ -117,10 +121,25 @@ def main():
     if not raw_request:
         raw_request = str(existing_task.get("raw_request") or "").strip()
 
-    brief = load_brief(args, payload, existing_task, raw_request)
+    brief = dict(load_brief(args, payload, existing_task, raw_request) or {})
     project_id = resolve_project_id(args.project_id or "", existing_task, payload, raw_request)
     if project_id:
         brief["project_id"] = project_id
+    brief["must_have"] = normalize_string_list(brief.get("must_have"))
+    brief["style_bias"] = normalize_string_list(brief.get("style_bias"))
+    brief["must_not_have"] = normalize_string_list(brief.get("must_not_have"))
+
+    subject_contract = merge_subject_contract(
+        existing_task.get("subject_contract"),
+        infer_subject_contract(raw_request, brief, existing_task.get("subject_contract")),
+    )
+    subject_constraints = subject_contract_to_brief_constraints(subject_contract)
+    for value in subject_constraints.get("must_have", []):
+        if value not in brief["must_have"]:
+            brief["must_have"].append(value)
+    for value in subject_constraints.get("must_not_have", []):
+        if value not in brief["must_not_have"]:
+            brief["must_not_have"].append(value)
 
     selected_mode = normalize_mode_label(
         args.mode
@@ -188,6 +207,7 @@ def main():
         "raw_request": raw_request,
         "goal": str(brief.get("goal") or raw_request).strip(),
         "brief": brief,
+        "subject_contract": subject_contract,
         "memory_snapshot": payload.get("memory_snapshot") or existing_task.get("memory_snapshot") or {},
         "current_prompt": str(payload.get("current_prompt") or existing_task.get("current_prompt") or "").strip(),
         "prompt_version": prompt_version,

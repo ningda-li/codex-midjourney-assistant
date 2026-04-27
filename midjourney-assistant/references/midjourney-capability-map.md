@@ -1,4 +1,35 @@
-﻿# Midjourney 能力地图
+# Midjourney 能力地图
+
+## 目录
+
+- 作用
+- 选择总原则
+- 能力卡片
+  - 1. 文本 Prompt
+  - 2. Image Prompt
+  - 3. Style Reference
+  - 4. Omni Reference
+  - 5. Character Reference
+  - 6. Personalization
+  - 7. Moodboards
+  - 8. Describe
+  - 9. Prompt Shortener
+  - 10. Raw Mode
+  - 11. Run as HD
+  - 12. Draft Mode
+  - 13. Conversational Mode
+  - 14. Style Explorer
+  - 15. Style Creator
+  - 16. Editor
+  - 17. Smart Select
+  - 18. Layers
+  - 19. Retexture
+  - 20. Text Generation
+  - 21. Video
+  - 22. Seed Lock
+- 按任务类型的首选能力
+- 输出约束
+
 
 ## 作用
 

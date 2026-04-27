@@ -5,8 +5,10 @@ from pathlib import Path
 from common import (
     BOOTSTRAP_STATE_PATH,
     ENVIRONMENT_NOTES_PATH,
+    build_dependency_repair_plan,
     configure_stdout,
     detect_runtime_environment,
+    execute_dependency_repair_plan,
     now_iso,
     read_text,
     write_text,
@@ -14,13 +16,69 @@ from common import (
 
 
 DEFAULT_STEPS = [
+    "如果你要用自动模式，先把 Codex 的权限切换成**完全访问权限**；手动模式不需要这一步。",
     "自动模式默认走后台模式：我会自己拉起独立浏览器完成首次测试，不需要你先打开当前主浏览器页面，也不会占用你现在正在使用的主浏览器。",
     "如果这套独立浏览器还没登录 Midjourney，首次只需要你在那套独立浏览器里配合登录一次；登录完成后我会继续同一轮测试。",
     "如果这台电脑一个可用的后台浏览器都没检测到，我会直接提示你先安装 Edge，再继续首次测试。",
     "自动模式当前要求 Windows 桌面环境，并且本机要有可用的 PowerShell、Node.js 和受支持的 Chromium 浏览器。",
     "只有你明确说“前台模式”时，我才改用你当前已打开的页面；这时才要求你不要最小化页面，也尽量不要和自动操作同时抢鼠标键盘。",
     "首次测试只做一轮最小闭环：确认页面可识别、prompt 可提交、任务能开始、结果能读回。",
+    "如果首测发现缺少 Node.js、PowerShell 或后台浏览器，你可以直接说“修复依赖”，我再尝试安装；默认不会静默安装系统软件。",
     "首轮成功后，我会记录当前站点、执行后端和使用环境，后面就直接进入正式任务。",
+]
+
+MINIMAL_FIRST_TEST_CONTRACT = [
+    {
+        "layer": "preflight",
+        "goal": "先确认本机具备自动模式启动前提。",
+        "failure_surface": "preflight_layers",
+        "blocking_reasons": [
+            "unsupported_platform",
+            "powershell_runtime_missing",
+            "node_runtime_missing",
+            "runtime_write_unavailable",
+            "no_supported_browser_found",
+        ],
+    },
+    {
+        "layer": "browser_session",
+        "goal": "后台模式能拉起或复用独立浏览器，并进入 Midjourney 登录态。",
+        "failure_surface": "auto_result.execution_governance",
+        "blocking_reasons": [
+            "needs_isolated_browser_login",
+            "isolated_browser_challenge_page",
+            "automatic_backend_runtime_error",
+        ],
+    },
+    {
+        "layer": "page_input",
+        "goal": "页面可识别，prompt 输入区可定位并可提交。",
+        "failure_surface": "auto_result.execution_governance",
+        "blocking_reasons": [
+            "isolated_browser_input_not_ready",
+            "prompt_region_not_found",
+            "prompt_region_unconfirmed",
+        ],
+    },
+    {
+        "layer": "submission",
+        "goal": "最小 prompt 能成功发起生成，不在启动阶段超时。",
+        "failure_surface": "auto_result.execution_governance",
+        "blocking_reasons": [
+            "start_timeout",
+            "automatic_backend_runtime_error",
+        ],
+    },
+    {
+        "layer": "result_readback",
+        "goal": "结果区域能对应到本轮 prompt，并在时间预算内读回。",
+        "failure_surface": "auto_result.execution_governance",
+        "blocking_reasons": [
+            "complete_timeout",
+            "prompt_region_not_found",
+            "prompt_region_unconfirmed",
+        ],
+    },
 ]
 
 
@@ -34,6 +92,8 @@ def parse_args():
     parser.add_argument("--host", help="记录当前站点 host")
     parser.add_argument("--browser", help="记录当前浏览器")
     parser.add_argument("--environment-summary", help="记录当前环境摘要")
+    parser.add_argument("--repair-dependencies", action="store_true", help="用户明确授权后，尝试安装缺失的系统依赖")
+    parser.add_argument("--repair-dry-run", action="store_true", help="只输出依赖修复计划，不实际安装")
     return parser.parse_args()
 
 
@@ -76,36 +136,66 @@ def append_environment_note(path: Path, note: str) -> None:
 
 
 def build_environment_steps(environment_check: dict):
-    steps = []
-    if not environment_check.get("os_supported"):
-        steps.append("当前自动模式只支持 Windows 桌面环境；如果这台电脑不是 Windows，先直接改走手动模式。")
-    if not environment_check.get("powershell_available"):
-        steps.append("当前没有检测到可用的 PowerShell；自动模式启动前需要先安装 PowerShell。")
-    if not environment_check.get("node_available"):
-        steps.append("当前没有检测到 Node.js；后台自动模式启动前需要先安装 Node.js。")
-    if environment_check.get("os_supported") and not environment_check.get("supported_browser_found"):
-        steps.append("当前没有检测到受支持的 Chromium 浏览器；建议先安装 Edge。")
+    steps = [
+        str(layer.get("user_message") or "").strip()
+        for layer in environment_check.get("required_preflight_blocks") or []
+        if str(layer.get("user_message") or "").strip()
+    ]
     return steps
 
 
-def build_message(needs_onboarding: bool, environment_check: dict) -> str:
+def build_dependency_repair_steps(repair_plan: dict):
+    if not repair_plan.get("can_attempt_repair"):
+        return []
+    names = [
+        str(action.get("display_name") or "").strip()
+        for action in repair_plan.get("repairable_actions") or []
+        if str(action.get("display_name") or "").strip()
+    ]
+    if not names:
+        return []
+    return [
+        "检测到可自动尝试修复的系统依赖："
+        + "、".join(names)
+        + "；你可以直接说“修复依赖”，我再尝试安装。默认不会静默安装系统软件。"
+    ]
+
+
+def build_dependency_repair_notice(repair_plan: dict) -> str:
+    if not repair_plan.get("can_attempt_repair"):
+        return ""
+    names = [
+        str(action.get("display_name") or "").strip()
+        for action in repair_plan.get("repairable_actions") or []
+        if str(action.get("display_name") or "").strip()
+    ]
+    if not names:
+        return ""
+    return "这些属于可尝试自动修复的系统依赖；你可以直接说“修复依赖”，我再尝试安装。默认不会静默安装系统软件。"
+
+
+def build_message(needs_onboarding: bool, environment_check: dict, repair_plan: dict) -> str:
+    first_block = environment_check.get("first_required_preflight_block") or {}
+    repair_notice = build_dependency_repair_notice(repair_plan)
     if not needs_onboarding:
+        if first_block:
+            return (
+                "当前基础引导已完成，但自动模式依赖检查未通过。"
+                f"{str(first_block.get('user_message') or '').strip()}"
+                f"{repair_notice}"
+            )
         return "已具备基础启动条件，可直接进入正常任务流程。"
     environment_note = ""
-    if not environment_check.get("os_supported"):
-        environment_note = "当前自动模式只支持 Windows 桌面环境。"
-    elif not environment_check.get("powershell_available"):
-        environment_note = "当前这台电脑缺少可用的 PowerShell。"
-    elif not environment_check.get("node_available"):
-        environment_note = "当前这台电脑缺少 Node.js。"
-    elif not environment_check.get("supported_browser_found"):
-        environment_note = "当前这台电脑没有检测到可用的后台浏览器。"
+    if first_block:
+        environment_note = str(first_block.get("user_message") or "").strip()
     return (
         "这是首次启动或首次引导尚未完成。"
+        "如果你要用自动模式，先把 Codex 的权限切换成**完全访问权限**；手动模式不需要这一步。"
         "自动模式默认走后台模式，我会自己拉起独立浏览器完成首次测试；"
         "只有那套独立浏览器还没登录时，才需要你配合登录一次。"
         "如果这台电脑连一个可用的后台浏览器都没检测到，我会直接建议你先安装 Edge。"
         f"{environment_note}"
+        f"{repair_notice}"
         "如果你明确说前台模式，我才改用你当前已打开的页面。"
     )
 
@@ -118,6 +208,25 @@ def main():
     state = load_state(state_path)
     now = now_iso()
     environment_check = detect_runtime_environment()
+    repair_plan = build_dependency_repair_plan(environment_check)
+    dependency_repair = {
+        "requested": False,
+        "dry_run": False,
+        "attempted": False,
+        "plan": repair_plan,
+        "outcomes": [],
+    }
+
+    if args.repair_dependencies:
+        repair_execution = execute_dependency_repair_plan(repair_plan, dry_run=args.repair_dry_run)
+        environment_check = detect_runtime_environment()
+        repair_plan = build_dependency_repair_plan(environment_check)
+        dependency_repair = {
+            **repair_execution,
+            "plan": repair_plan,
+            "post_repair_required_preflight_blocks": environment_check.get("required_preflight_blocks") or [],
+            "post_repair_can_run_minimal_first_test": bool(environment_check.get("can_run_minimal_first_test")),
+        }
 
     if args.mark_seen:
         state.setdefault("first_seen_at", now)
@@ -143,6 +252,13 @@ def main():
     if args.mark_seen or args.mark_complete:
         save_state(state_path, state)
 
+    recommended_steps = []
+    if needs_onboarding:
+        recommended_steps.extend(DEFAULT_STEPS)
+    if needs_onboarding or environment_check.get("required_preflight_blocks"):
+        recommended_steps.extend(build_environment_steps(environment_check))
+        recommended_steps.extend(build_dependency_repair_steps(repair_plan))
+
     result = {
         "is_first_run": needs_onboarding,
         "needs_onboarding": needs_onboarding,
@@ -153,9 +269,16 @@ def main():
         "foreground_automatic_backend": "window_uia",
         "state_path": str(state_path),
         "environment_path": str(environment_path),
-        "message": build_message(needs_onboarding, environment_check),
-        "recommended_steps": (DEFAULT_STEPS + build_environment_steps(environment_check)) if needs_onboarding else [],
+        "message": build_message(needs_onboarding, environment_check, repair_plan),
+        "recommended_steps": recommended_steps,
         "environment_check": environment_check,
+        "preflight_layers": environment_check.get("preflight_layers") or [],
+        "required_preflight_blocks": environment_check.get("required_preflight_blocks") or [],
+        "nonfatal_preflight_warnings": environment_check.get("nonfatal_preflight_warnings") or [],
+        "can_run_minimal_first_test": bool(environment_check.get("can_run_minimal_first_test")),
+        "minimal_first_test_contract": MINIMAL_FIRST_TEST_CONTRACT,
+        "dependency_repair_plan": repair_plan,
+        "dependency_repair": dependency_repair,
     }
 
     output = json.dumps(result, ensure_ascii=False, indent=2)

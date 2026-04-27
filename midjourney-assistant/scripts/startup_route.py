@@ -14,19 +14,14 @@ from common import (
 
 
 SKILL_PATTERN = re.compile(r"^\s*\$?midjourney-assistant\b[:：,\s-]*", re.I)
+ENGLISH_MODE_PREFIX = (
+    r"background(?:\s+mode)?|foreground(?:\s+mode)?|automatic(?:\s+mode)?|auto(?:\s+mode)?|manual(?:\s+mode)?"
+)
+MODE_BOUNDARY_PATTERN = r"(?:^|[\s,.:;,\uFF0C\u3002\uFF1A])"
 LEADING_MODE_PATTERN = re.compile(
-    r"^\s*(后台模式|前台模式|自动模式|手动模式|auto|automatic|manual)\s*[:：,，-]*\s*",
+    rf"^\s*(\u540e\u53f0\u6a21\u5f0f|\u524d\u53f0\u6a21\u5f0f|\u81ea\u52a8\u6a21\u5f0f|\u624b\u52a8\u6a21\u5f0f|{ENGLISH_MODE_PREFIX})\s*[:\uFF1A,\uFF0C-]*\s*",
     re.I,
 )
-MODE_ONLY_TOKENS = {
-    "自动模式",
-    "手动模式",
-    "后台模式",
-    "前台模式",
-    "auto",
-    "automatic",
-    "manual",
-}
 
 
 def parse_args():
@@ -67,18 +62,26 @@ def detect_explicit_mode(text: str) -> str:
     explicit_backend = detect_explicit_backend(text)
     if explicit_backend:
         return "automatic"
-    if re.search(r"(?:^|[\s，,。：:])自动模式(?:$|[\s，,。：:])", text):
+    if re.search(r"(?:^|[\s，。：:])自动模式(?:$|[\s，。：:])", text):
         return "automatic"
-    if re.search(r"(?:^|[\s，,。：:])手动模式(?:$|[\s，,。：:])", text):
+    if re.search(r"(?:^|[\s，。：:])手动模式(?:$|[\s，。：:])", text):
+        return "manual"
+    if re.search(rf"{MODE_BOUNDARY_PATTERN}(?:automatic|auto)(?:\s+mode)?(?:$|[\s,.:;,\uFF0C\u3002\uFF1A])", text, re.I):
+        return "automatic"
+    if re.search(rf"{MODE_BOUNDARY_PATTERN}manual(?:\s+mode)?(?:$|[\s,.:;,\uFF0C\u3002\uFF1A])", text, re.I):
         return "manual"
     normalized = normalize_mode_label(text)
     return normalized if normalized in {"automatic", "manual"} else ""
 
 
 def detect_explicit_backend(text: str) -> str:
-    if re.search(r"(?:^|[\s，,。：:])后台模式(?:$|[\s，,。：:])", text):
+    if re.search(r"(?:^|[\s，。：:])后台模式(?:$|[\s，。：:])", text):
         return "isolated_browser"
-    if re.search(r"(?:^|[\s，,。：:])前台模式(?:$|[\s，,。：:])", text):
+    if re.search(r"(?:^|[\s，。：:])前台模式(?:$|[\s，。：:])", text):
+        return "window_uia"
+    if re.search(rf"{MODE_BOUNDARY_PATTERN}background(?:\s+mode)?(?:$|[\s,.:;,\uFF0C\u3002\uFF1A])", text, re.I):
+        return "isolated_browser"
+    if re.search(rf"{MODE_BOUNDARY_PATTERN}foreground(?:\s+mode)?(?:$|[\s,.:;,\uFF0C\u3002\uFF1A])", text, re.I):
         return "window_uia"
     normalized = normalize_automatic_backend(text)
     return normalized if normalized in {"isolated_browser", "window_uia"} else ""
