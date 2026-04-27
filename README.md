@@ -4,6 +4,22 @@
 
 它不只是代点网页，还会把用户需求整理成可执行的 Midjourney `brief`、`solution_plan` 和英文 `prompt`，并在自动模式或手动模式下持续做结果判断与迭代。
 
+## 运行效果
+
+下面是一次自动模式下的连续生图和反馈迭代过程：先启动助手并切换自动模式，再提交角色需求，随后根据生成结果逐轮调整服装、配色、发型和画风。
+
+<p align="center">
+  <img src="./docs/images/midjourney-assistant-readme-01-start.png" alt="Midjourney 使用助手启动并切换自动模式" width="760">
+</p>
+
+<p align="center">
+  <img src="./docs/images/midjourney-assistant-readme-02-feedback.png" alt="自动模式根据用户反馈继续调整服装和配色" width="760">
+</p>
+
+<p align="center">
+  <img src="./docs/images/midjourney-assistant-readme-03-iteration.png" alt="自动模式多轮迭代并记录满意风格" width="760">
+</p>
+
 ## 当前能力
 
 - 自动模式
