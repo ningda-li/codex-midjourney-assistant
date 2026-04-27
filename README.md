@@ -43,6 +43,9 @@ midjourney-assistant/
   assets/
   references/
   scripts/
+  templates/
+    subskill-proposals/
+    task-templates/
 ```
 
 仓库只包含 skill 本体，不包含任何本地记忆、运行日志、登录态或个人环境状态。
